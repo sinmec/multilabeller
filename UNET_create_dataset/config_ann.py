@@ -1,0 +1,23 @@
+WINDOW_NAME = "UNET_annotation"
+# IMG_SIZE = (1536, 1536)
+# IMG_SIZE = (768, 768)
+IMG_SIZE = (256, 256)
+# IMG_SIZE = (128, 128)
+# IMG_SIZE = (192, 192)
+# IMG_SIZE = (96 ,  96)
+STRIDE_DIVISION = 8
+MODE = "FULL"
+
+UNET_bin_value = 20
+
+
+N_FIX_CNT_POINTS = 30
+
+# OVERLAP_THRESH = 0.08 # varies from 0.0 to 1.0
+OVERLAP_PIX    = 5 # pixel units
+DIAM_1_THRESH = 10
+DIAM_2_THRESH = 10
+
+LOV_DISPL = 15
+
+# MODE = "HALO"
