@@ -11,7 +11,6 @@ import random
 import numpy as np
 import cv2
 import h5py
-import keyboard
 
 import sys
 
@@ -352,9 +351,6 @@ for index_imgs in random_array:
             new_contour = ellipse_contour()
             new_contour.d_2 = contour_collection.last_d_2
             contour_collection.add_contour(new_contour)
-
-        if key == 101: # key e
-            print('eee')
 
         if key == 32: # key Space
             operationMode = not operationMode
