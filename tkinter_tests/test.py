@@ -5,6 +5,11 @@ import numpy as np
 
 class Aplicacao:
     def __init__(self, janela):
+        self.count_wheel = None
+        self.scroll_para_cima_ativado = None
+        self.retangulo_y = None
+        self.retangulo_x = None
+        self.wheel = None
         self.janela = janela
         self.janela.title("Aplicacao OpenCV + Tkinter")
 
@@ -35,9 +40,48 @@ class Aplicacao:
         frame = cv2.imread(r"/home/sinmec/imgs/out_000001.jpg")
         # W, H = frame.shape
         # cap = cv2.VideoCapture(0)
-        #
+        #self.create_rectangle(frame, self.mouse_x, self.mouse_y)
+        self.rodar_imagem(frame)
+
+    def rodar_imagem(self, img):
+        #self.create_rectangle(img, self.mouse_x, self.mouse_y)
+        self.retangulo_x = self.mouse_x
+        self.retangulo_y = self.mouse_y
+        count = 1
+        img_rectangle = img
         while True:
-            self.atualizar_video(frame)
+            if self.wheel == 4:
+                self.retangulo_x = self.mouse_x
+                self.retangulo_y = self.mouse_y
+                count += 0.5
+                self.wheel = None
+                while True:
+                    img_rectangle = self.criar_retangulo(img, self.retangulo_x, self.retangulo_y, 216 / count,
+                                                         1024 / count)
+                    self.atualizar_video(img_rectangle)
+                    if self.wheel == 4:
+                        self.wheel = None
+                        break
+            elif self.wheel == 5:
+                print('entrou aqui')
+                self.retangulo_x = self.mouse_x
+                self.retangulo_y = self.mouse_y
+                count -= 0.5
+                if count == 0:
+                    count = 1
+                self.wheel = None
+                while True:
+                    img_rectangle = self.criar_retangulo(img, self.retangulo_x, self.retangulo_y, 216 / count,
+                                                         1024 / count)
+                    self.atualizar_video(img_rectangle)
+                    if self.wheel == 5:
+                        self.wheel = None
+                        break
+            else:
+                self.atualizar_video(img_rectangle)
+
+
+
         #     ret, frame = cap.read()
         #     if not ret:
         #         continue
@@ -49,6 +93,20 @@ class Aplicacao:
         #
         #     # Atualize o vídeo no canvas do Tkinter
         #     self.atualizar_video(frame)
+
+    def criar_retangulo(self, imagem, x, y, largura, altura):
+        imagem_com_retangulo = imagem.copy()
+        cor = (0, 255, 0)
+        espessura = 2
+
+        x1 = int(x - largura / 2)
+        y1 = int(y - altura / 2)
+        x2 = int(x + largura / 2)
+        y2 = int(y + altura / 2)
+
+        cv2.rectangle(imagem_com_retangulo, (x1, y1), (x2, y2), cor, espessura)
+
+        return imagem_com_retangulo
 
     def aplicar_zoom(self, frame, zoom):
         altura, largura, _ = frame.shape
@@ -88,32 +146,44 @@ class Aplicacao:
         self.video_canvas.imagem = imagem  # Mantém uma referência para evitar a coleta de lixo
 
     def on_mouse_wheel(self, event):
-        # Verifica se a tecla Ctrl está pressionada e atualiza o zoom com base na rolagem do mouse
-        # if event.state == 4:  # 4 é o valor para a tecla Ctrl
-        if event.delta > 0:
-            self.zoom += 0.1  # Zoom in
-        else:
-            self.zoom -= 0.1  # Zoom out
+        # # Verifica se a tecla Ctrl está pressionada e atualiza o zoom com base na rolagem do mouse
+        # # if event.state == 4:  # 4 é o valor para a tecla Ctrl
+        # if event.delta > 0:
+        #     self.zoom += 0.1  # Zoom in
+        # else:
+        #     self.zoom -= 0.1  # Zoom out
+        #
+        # print('eu to zoomando!!!')
+        # self.zoom = max(0.1, self.zoom)  # Limita o zoom mínimo
+        # self.zoom = min(2.0, self.zoom)  # Limita o zoom máximo
+        if event.num == 4:
+            print('zoom para cima')
+        elif event.num == 5:
+            print('zoom para baixo')
+        if event.num == 1:
+            print('Clique')
 
-        print('eu to zoomando!!!')
-        self.zoom = max(0.1, self.zoom)  # Limita o zoom mínimo
-        self.zoom = min(2.0, self.zoom)  # Limita o zoom máximo
+        self.wheel = event.num
 
     def on_mouse_motion(self, event):
         # Atualiza a posição do mouse
 
         self.mouse_x = event.x
         self.mouse_y = event.y
-
         print(self.mouse_x, self.mouse_y)
+
+
+
 
 if __name__ == "__main__":
     root = tk.Tk()
     app = Aplicacao(root)
 
     # Associe a rolagem do mouse ao método de zoom
-    # app.video_canvas.bind("<MouseWheel>", app.on_mouse_wheel)
+    app.video_canvas.bind("<Button-4>", app.on_mouse_wheel)
+    app.video_canvas.bind("<Button-5>", app.on_mouse_wheel)
     app.video_canvas.bind("<Motion>", app.on_mouse_motion)
+    app.video_canvas.bind("<Button-1>", app.on_mouse_wheel)
 
 
 
