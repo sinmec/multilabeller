@@ -1,13 +1,9 @@
-import os
 import cv2
 import numpy as np
-import tensorflow as tf
-import time
 
 
 def find_contours(img_UNET):
-
-    # Crearing the contour list
+    # Creating the contour list
     img_contours = []
 
     # Finding the contours
@@ -23,8 +19,8 @@ def find_contours(img_UNET):
 
     # Looping around the contours
     for cnt in contours:
-        X = cnt[:,0,0]
-        Y = cnt[:,0,1]
+        X = cnt[:, 0, 0]
+        Y = cnt[:, 0, 1]
 
         # If the contour touch the boundaries, it is not valid
         l_flag = np.min(X) == 0
