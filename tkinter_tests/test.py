@@ -53,30 +53,23 @@ class Aplicacao:
             if self.wheel == 4:
                 self.retangulo_x = self.mouse_x
                 self.retangulo_y = self.mouse_y
-                count += 0.5
+                count += 0.2
                 self.wheel = None
-                while True:
-                    img_rectangle = self.criar_retangulo(img, self.retangulo_x, self.retangulo_y, 216 / count,
+
+                img_rectangle = self.criar_retangulo(img, self.retangulo_x, self.retangulo_y, 216 / count,
                                                          1024 / count)
-                    self.atualizar_video(img_rectangle)
-                    if self.wheel == 4:
-                        self.wheel = None
-                        break
+                self.atualizar_video(img_rectangle)
             elif self.wheel == 5:
-                print('entrou aqui')
                 self.retangulo_x = self.mouse_x
                 self.retangulo_y = self.mouse_y
-                count -= 0.5
+                count -= 0.2
                 if count == 0:
                     count = 1
                 self.wheel = None
-                while True:
-                    img_rectangle = self.criar_retangulo(img, self.retangulo_x, self.retangulo_y, 216 / count,
+
+                img_rectangle = self.criar_retangulo(img, self.retangulo_x, self.retangulo_y, 216 / count,
                                                          1024 / count)
-                    self.atualizar_video(img_rectangle)
-                    if self.wheel == 5:
-                        self.wheel = None
-                        break
+                self.atualizar_video(img_rectangle)
             else:
                 self.atualizar_video(img_rectangle)
 
