@@ -10,6 +10,12 @@ class Aplicacao:
         self.retangulo_y = None
         self.retangulo_x = None
         self.wheel = None
+        self.frame = None
+        self.height = None
+        self.width = None
+        self.channels = None
+
+
         self.janela = janela
         self.janela.title("Aplicacao OpenCV + Tkinter")
 
@@ -18,7 +24,6 @@ class Aplicacao:
 
         self.status_label = tk.Label(self.frame, text="Status: Aguardando...")
         self.status_label.pack()
-
         # Crie uma área para exibir o vídeo (ou imagem) usando OpenCV
         self.video_canvas = tk.Canvas(self.frame, width=216, height=1024) #TODO: Implement dynamic canvas size
         self.video_canvas.pack()
@@ -37,11 +42,8 @@ class Aplicacao:
         self.thread_opencv.start()
 
     def executar_opencv(self):
-        frame = cv2.imread(r"/home/sinmec/imgs/out_000001.jpg")
-        # W, H = frame.shape
-        # cap = cv2.VideoCapture(0)
-        #self.create_rectangle(frame, self.mouse_x, self.mouse_y)
-        self.rodar_imagem(frame)
+        self.frame = cv2.imread(r"/home/sinmec/imgs/out_000001.jpg")
+        self.rodar_imagem(self.frame)
 
     def rodar_imagem(self, img):
         #self.create_rectangle(img, self.mouse_x, self.mouse_y)
@@ -56,6 +58,16 @@ class Aplicacao:
                 count += 0.2
                 self.wheel = None
 
+                if (self.retangulo_x + (216 / count) / 2) > 216:
+                    self.retangulo_x = self.retangulo_x - ((self.retangulo_x + (216 / count) / 2) - 216)
+                if (self.retangulo_x - (216/count)/2) < 0:
+                    self.retangulo_x = self.retangulo_x + (0 - (self.retangulo_x - ((216/count) / 2)))
+
+                if (self.retangulo_y + (1024 / count) / 2) > 1024:
+                    self.retangulo_y = self.retangulo_y - ((self.retangulo_y + (1024 / count) / 2) - 1024)
+                if (self.retangulo_y - (1024/count)/2) < 0:
+                    self.retangulo_y = self.retangulo_y + (0 - (self.retangulo_y - ((1024/count) / 2)))
+
                 img_rectangle = self.criar_retangulo(img, self.retangulo_x, self.retangulo_y, 216 / count,
                                                          1024 / count)
                 self.atualizar_video(img_rectangle)
@@ -63,9 +75,19 @@ class Aplicacao:
                 self.retangulo_x = self.mouse_x
                 self.retangulo_y = self.mouse_y
                 count -= 0.2
-                if count == 0:
+                if count < 0:
                     count = 1
                 self.wheel = None
+
+                if (self.retangulo_x + (216/count)/2) > 216:
+                        self.retangulo_x = self.retangulo_x - (( self.retangulo_x + (216/count)/2) - 216)
+                if (self.retangulo_x - (216/count)/2) < 0:
+                    self.retangulo_x = self.retangulo_x + (0 - (self.retangulo_x - ((216/count) / 2)))
+
+                if (self.retangulo_y + (1024 / count) / 2) > 1024:
+                    self.retangulo_y = self.retangulo_y - ((self.retangulo_y + (1024 / count) / 2) - 1024)
+                if (self.retangulo_y - (1024/count)/2) < 0:
+                    self.retangulo_y = self.retangulo_y + (0 - (self.retangulo_y - ((1024/count) / 2)))
 
                 img_rectangle = self.criar_retangulo(img, self.retangulo_x, self.retangulo_y, 216 / count,
                                                          1024 / count)
@@ -139,22 +161,10 @@ class Aplicacao:
         self.video_canvas.imagem = imagem  # Mantém uma referência para evitar a coleta de lixo
 
     def on_mouse_wheel(self, event):
-        # # Verifica se a tecla Ctrl está pressionada e atualiza o zoom com base na rolagem do mouse
-        # # if event.state == 4:  # 4 é o valor para a tecla Ctrl
-        # if event.delta > 0:
-        #     self.zoom += 0.1  # Zoom in
-        # else:
-        #     self.zoom -= 0.1  # Zoom out
-        #
-        # print('eu to zoomando!!!')
-        # self.zoom = max(0.1, self.zoom)  # Limita o zoom mínimo
-        # self.zoom = min(2.0, self.zoom)  # Limita o zoom máximo
         if event.num == 4:
             print('zoom para cima')
         elif event.num == 5:
             print('zoom para baixo')
-        if event.num == 1:
-            print('Clique')
 
         self.wheel = event.num
 
