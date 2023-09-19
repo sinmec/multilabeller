@@ -79,15 +79,19 @@ class Aplicacao:
                     count = 1
                 self.wheel = None
 
-                if (self.retangulo_x + (216/count)/2) > 216:
-                        self.retangulo_x = self.retangulo_x - (( self.retangulo_x + (216/count)/2) - 216)
-                if (self.retangulo_x - (216/count)/2) < 0:
-                    self.retangulo_x = self.retangulo_x + (0 - (self.retangulo_x - ((216/count) / 2)))
+                # if (self.retangulo_x + (216/count)/2) > 216:
+                #         self.retangulo_x = self.retangulo_x - (( self.retangulo_x + (216/count)/2) - 216)
+                # if (self.retangulo_x - (216/count)/2) < 0:
+                #     self.retangulo_x = self.retangulo_x + (0 - (self.retangulo_x - ((216/count) / 2)))
+                #
+                # if (self.retangulo_y + (1024 / count) / 2) > 1024:
+                #     self.retangulo_y = self.retangulo_y - ((self.retangulo_y + (1024 / count) / 2) - 1024)
+                # if (self.retangulo_y - (1024/count)/2) < 0:
+                #     self.retangulo_y = self.retangulo_y + (0 - (self.retangulo_y - ((1024/count) / 2)))
 
-                if (self.retangulo_y + (1024 / count) / 2) > 1024:
-                    self.retangulo_y = self.retangulo_y - ((self.retangulo_y + (1024 / count) / 2) - 1024)
-                if (self.retangulo_y - (1024/count)/2) < 0:
-                    self.retangulo_y = self.retangulo_y + (0 - (self.retangulo_y - ((1024/count) / 2)))
+                self.retangulo_x = self.check_borders(216, 1024, self.retangulo_x, self.retangulo_y, count)[0]
+                self.retangulo_y = self.check_borders(216, 1024, self.retangulo_x, self.retangulo_y, count)[1]
+
 
                 img_rectangle = self.criar_retangulo(img, self.retangulo_x, self.retangulo_y, 216 / count,
                                                          1024 / count)
@@ -95,20 +99,18 @@ class Aplicacao:
             else:
                 self.atualizar_video(img_rectangle)
 
+    def check_borders(self, width, height, x, y, count):
+        if (x + (width / count) / 2) > width:
+            x = x - ((x + (width / count) / 2) - width)
+        if (x - (width / count) / 2) < 0:
+            x = x + (0 - (x - ((width / count) / 2)))
 
-
-        #     ret, frame = cap.read()
-        #     if not ret:
-        #         continue
-        #
-        #     # Realize o zoom na imagem com base no valor de self.zoom
-        #     frame = self.aplicar_zoom(frame, self.zoom)
-        #     if (self.zoom) > 1.1:
-        #         print(self.zoom)
-        #
-        #     # Atualize o vídeo no canvas do Tkinter
-        #     self.atualizar_video(frame)
-
+        if (y + (height / count) / 2) > height:
+            y = y - ((y + (height / count) / 2) - height)
+        if (y - (height / count) / 2) < 0:
+            y = y + (0 - (y - ((height / count) / 2)))
+        return x, y
+        
     def criar_retangulo(self, imagem, x, y, largura, altura):
         imagem_com_retangulo = imagem.copy()
         cor = (0, 255, 0)
@@ -119,9 +121,16 @@ class Aplicacao:
         x2 = int(x + largura / 2)
         y2 = int(y + altura / 2)
 
+        x1 = max(0, x1)
+        y1 = max(0, y1)
+        x2 = min(216, x2)
+        y2 = min(1024, y2)
+
+        print(x1, y1, x2, y2)
         cv2.rectangle(imagem_com_retangulo, (x1, y1), (x2, y2), cor, espessura)
 
         return imagem_com_retangulo
+
 
     def aplicar_zoom(self, frame, zoom):
         altura, largura, _ = frame.shape
