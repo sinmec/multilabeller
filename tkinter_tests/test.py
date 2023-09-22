@@ -10,6 +10,8 @@ import numpy as np
 from PIL import Image, ImageTk
 
 
+
+
 class ImageViewerApp:
     def __init__(self, root):
         self.second_window_canvas = None
