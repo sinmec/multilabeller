@@ -194,12 +194,12 @@ class ImageViewerApp:
         # self.display_image_second_window()
 
     def on_mouse_wheel(self, event):
-        if os.name == 'nt' and not self.space_bar_activate:
+        if os.name == 'nt':
             if event.delta > 0:
                 self.rectangle_ROI_zoom_count += 1
             elif event.delta < 0:
                 self.rectangle_ROI_zoom_count -= 1
-        elif os.name == 'posix' and not self.space_bar_activate:
+        elif os.name == 'posix':
             if event.num == 4:
                 self.rectangle_ROI_zoom_count += 1
             elif event.num == 5:
@@ -219,7 +219,7 @@ if __name__ == "__main__":
     app.image_navigation_canvas.bind("<MouseWheel>", app.on_mouse_wheel)
     app.image_navigation_canvas.bind("<Button-4>", app.on_mouse_wheel)
     app.image_navigation_canvas.bind("<Button-5>", app.on_mouse_wheel)
-    #app.image_navigation_canvas.bind("<space>", app.space_bar) # TODO: why it doesnt work?
+    # app.image_navigation_canvas.bind("<space>", app.space_bar) TODO: why it doesnt work?
 
     if app.second_window_canvas is not None:
         app.second_window_canvas.bind("<Motion>", app.on_mouse_motion_second_window)
