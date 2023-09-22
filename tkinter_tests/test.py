@@ -12,6 +12,7 @@ from PIL import Image, ImageTk
 
 class ImageViewerApp:
     def __init__(self, root):
+        self.f9_activate = False
         self.second_window_canvas = None
         self.second_window = None
         self.wheel = None
@@ -42,11 +43,13 @@ class ImageViewerApp:
         self.rectangle_ROI_height = 0
         self.rectangle_ROI_zoom = 1.0
 
+        self.root = root
+        self.root.bind("<F9>", self.lock_image)
+
     def update_rectangle_size(self):
 
         min_rectangle_width = 10
         min_rectangle_height = min_rectangle_width * self.image_aspect_ratio
-
 
         max_zoom = float(self.image_height / min_rectangle_height)
         min_zoom = 1.01
@@ -78,6 +81,14 @@ class ImageViewerApp:
         self.image = cv2.rectangle(self.image_original.copy(), (x1, y1), (x2, y2), rectangle_color,
                                    rectangle_width)  # TODO: Why do we need this copy?
 
+        # if self.space_bar_activate:
+        #     self.image = self.image.copy()
+
+    # def lock_zoom(self):
+    #     if self.space_bar_activate:
+    #
+
+
     def get_image_dimensions(self):
         self.image_height, self.image_width, _ = self.image.shape
         self.image_aspect_ratio = self.image_height / self.image_width
@@ -91,7 +102,7 @@ class ImageViewerApp:
         a = 2
 
     def load_image_from_file(self):
-        file_path = Path(r"C:\Users\rafaelfc\Data\imgs\out_000001.jpg")
+        file_path = Path(r"/home/sinmec/imgs/out_000001.jpg")
         image = cv2.imread(str(file_path))
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
@@ -158,13 +169,18 @@ class ImageViewerApp:
     def on_mouse_motion(self, event):
         self.mouse_x = event.x
         self.mouse_y = event.y
-        self.update_rectangle_size()
-        self.draw_rectangle_ROI()
+        if not self.f9_activate:
+            self.update_rectangle_size()
+            self.draw_rectangle_ROI()
         self.update_zoomed_image()
         self.display_image_navigation_window()
         self.display_image_second_window()
 
         print('window 1', event.x, event.y)
+
+    def lock_image(self, event):
+        self.f9_activate = not self.f9_activate
+        print(self.f9_activate)
 
     def on_mouse_motion_second_window(self, event):
         self.mouse_x = event.x
@@ -178,17 +194,16 @@ class ImageViewerApp:
         # self.display_image_second_window()
 
     def on_mouse_wheel(self, event):
-        if os.name == 'nt':
+        if os.name == 'nt' and not self.space_bar_activate:
             if event.delta > 0:
                 self.rectangle_ROI_zoom_count += 1
             elif event.delta < 0:
                 self.rectangle_ROI_zoom_count -= 1
-        elif os.name == 'posix':
-            pass
-
-
-
-
+        elif os.name == 'posix' and not self.space_bar_activate:
+            if event.num == 4:
+                self.rectangle_ROI_zoom_count += 1
+            elif event.num == 5:
+                self.rectangle_ROI_zoom_count -= 1
 
     def run(self):
         self.load_image_from_file()
@@ -202,9 +217,11 @@ if __name__ == "__main__":
     app = ImageViewerApp(root)
     app.image_navigation_canvas.bind("<Motion>", app.on_mouse_motion)
     app.image_navigation_canvas.bind("<MouseWheel>", app.on_mouse_wheel)
+    app.image_navigation_canvas.bind("<Button-4>", app.on_mouse_wheel)
+    app.image_navigation_canvas.bind("<Button-5>", app.on_mouse_wheel)
+    #app.image_navigation_canvas.bind("<space>", app.space_bar) # TODO: why it doesnt work?
+
     if app.second_window_canvas is not None:
         app.second_window_canvas.bind("<Motion>", app.on_mouse_motion_second_window)
 
-
     app.run()
-
