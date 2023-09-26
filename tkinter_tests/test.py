@@ -12,8 +12,11 @@ from PIL import Image, ImageTk
 
 class ImageViewerApp:
     def __init__(self, root):
+        self.image3 = None
         self.image2 = None
         self.circle = None
+        self.mouse_rec_x = None
+        self.mouse_rec_y = None
         self.mouse_x2 = None
         self.mouse_y2 = None
         self.rect = False
@@ -21,6 +24,10 @@ class ImageViewerApp:
         self.second_window_canvas = None
         self.second_window = None
         self.wheel = None
+        self.x1 = None
+        self.y1 = None
+        self.x2 = None
+        self.y2 = None
         self.mouse_x = 0
         self.mouse_y = 0
 
@@ -71,19 +78,19 @@ class ImageViewerApp:
         rectangle_color = (0, 255, 0)
         rectangle_width = 2
 
-        x1 = int(self.mouse_x - self.rectangle_ROI_width / 2)
-        y1 = int(self.mouse_y - self.rectangle_ROI_height / 2)
-        x2 = int(self.mouse_x + self.rectangle_ROI_width / 2)
-        y2 = int(self.mouse_y + self.rectangle_ROI_height / 2)
+        self.x1 = int(self.mouse_x - self.rectangle_ROI_width / 2)
+        self.y1 = int(self.mouse_y - self.rectangle_ROI_height / 2)
+        self.x2 = int(self.mouse_x + self.rectangle_ROI_width / 2)
+        self.y2 = int(self.mouse_y + self.rectangle_ROI_height / 2)
 
-        x1 = max(2, x1)
-        y1 = max(2, y1)
-        x2 = min(self.image_width - 2, x2)
-        y2 = min(self.image_height + 2, y2)
+        self.x1 = max(2, self.x1)
+        self.y1 = max(2, self.y1)
+        self.x2 = min(self.image_width - 2, self.x2)
+        self.y2 = min(self.image_height + 2, self.y2)
 
-        self.zoomed_image_coords = (x1, x2, y1, y2)
+        self.zoomed_image_coords = (self.x1, self.x2, self.y1, self.y2)
 
-        self.image = cv2.rectangle(self.image_original.copy(), (x1, y1), (x2, y2), rectangle_color,
+        self.image = cv2.rectangle(self.image_original.copy(), (self.x1, self.y1), (self.x2, self.y2), rectangle_color,
                                    rectangle_width)  # TODO: Why do we need this copy?
 
     def get_image_dimensions(self):
@@ -121,10 +128,24 @@ class ImageViewerApp:
         rectangle_color = (0, 255, 0)
         rectangle_width = 2
 
-        rectangle = cv2.rectangle(self.zoomed_image.copy(), (x1, y1), (x2, y2), rectangle_color,
+        rectangle2 = cv2.rectangle(self.zoomed_image.copy(), (x1, y1), (x2, y2), rectangle_color,
+                                  rectangle_width)
+        print('chegoua qui')
+        self.display_image_second_window(rectangle2)
+
+    def rectangle_clone_on_main_window(self, event):
+        x1 = self.mouse_rec_x - 5
+        x2 = self.mouse_rec_x + 5
+        y1 = self.mouse_rec_y - 5
+        y2 = self.mouse_rec_y + 5
+
+        rectangle_color = (0, 255, 0)
+        rectangle_width = 1
+
+        rectangle = cv2.rectangle(self.image.copy(), (x1, y1), (x2, y2), rectangle_color,
                                   rectangle_width)
 
-        self.display_image_second_window(rectangle)
+        self.display_image_navigation_window(rectangle)
 
     def load_image_from_dialog(self):
         file_path = filedialog.askopenfilename(
@@ -156,12 +177,21 @@ class ImageViewerApp:
 
         self.second_window_canvas.config(width=new_size[0], height=new_size[1])
 
-    def display_image_navigation_window(self):
-        image = Image.fromarray(self.image)
-        photo = ImageTk.PhotoImage(image=image)
+    def display_image_navigation_window(self, img):
+        if img is None:
+            image = Image.fromarray(self.image)
+            photo = ImageTk.PhotoImage(image=image)
+            self.image_navigation_canvas.create_image(0, 0, anchor=tk.NW, image=photo)
+            self.image_navigation_canvas.photo = photo
+        else:
+            self.image3 = Image.fromarray(img)
+            photo = ImageTk.PhotoImage(image=self.image3)
+            self.image_navigation_canvas.create_image(0, 0, anchor=tk.NW, image=photo)
+            self.image_navigation_canvas.photo = photo
 
-        self.image_navigation_canvas.create_image(0, 0, anchor=tk.NW, image=photo)
-        self.image_navigation_canvas.photo = photo
+        self.second_window_canvas.bind("<Button-1>", self.rectangle_clone_on_main_window)
+        self.second_window_canvas.bind("<Double-Button-1>", self.rectangle_test_second_window)
+        self.second_window_canvas.bind("<Motion>", self.on_mouse_motion_second_window)
 
     def display_image_second_window(self, img):
         if img is None:
@@ -175,8 +205,6 @@ class ImageViewerApp:
             self.second_window_canvas.create_image(0, 0, anchor=tk.NW, image=photo)
             self.second_window_canvas.photo = photo
 
-        self.second_window_canvas.bind("<Double-Button-1>", self.rectangle_test_second_window)
-        self.second_window_canvas.bind("<Motion>", self.on_mouse_motion_second_window)
 
     def on_mouse_motion(self, event):
         self.mouse_x = event.x
@@ -186,7 +214,7 @@ class ImageViewerApp:
             self.draw_rectangle_ROI()
             self.update_zoomed_image()
             self.display_image_second_window(None)
-        self.display_image_navigation_window()
+            self.display_image_navigation_window(None)
 
         print('window 1', event.x, event.y)
 
@@ -198,7 +226,16 @@ class ImageViewerApp:
         self.mouse_x2 = event.x
         self.mouse_y2 = event.y
 
-        print('window 2', event.x, event.y)
+        self.mouse_rec_x = self.mouse_x + (self.mouse_x2 // self.rectangle_ROI_width)
+        # Todo: instead of self.mouse_x, put the origin of the rectangle
+        self.mouse_rec_y = self.mouse_y + (self.mouse_y2 // self.rectangle_ROI_height)
+        # Todo: instead of self.mouse_y, put the origin of the rectangle
+        
+        print(f'window 2:\n'
+              f'x = {event.x}\n'
+              f'y = {event.y}\n'
+              f'x on win1 = {self.mouse_rec_x}\n'
+              f'y on win1 = {self.mouse_rec_y}\n')
 
     def on_mouse_wheel(self, event):
         if os.name == 'nt':
@@ -214,7 +251,7 @@ class ImageViewerApp:
 
     def run(self):
         self.load_image_from_file()
-        self.display_image_navigation_window()
+        self.display_image_navigation_window(None)
         self.image_navigation_window.mainloop()
 
 
