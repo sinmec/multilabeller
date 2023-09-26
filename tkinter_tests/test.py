@@ -184,9 +184,9 @@ class ImageViewerApp:
         if not self.f9_activate:
             self.update_rectangle_size()
             self.draw_rectangle_ROI()
-        self.update_zoomed_image()
+            self.update_zoomed_image()
+            self.display_image_second_window(None)
         self.display_image_navigation_window()
-        self.display_image_second_window(None)
 
         print('window 1', event.x, event.y)
 
