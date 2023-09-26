@@ -14,6 +14,12 @@ from PIL import Image, ImageTk
 
 class ImageViewerApp:
     def __init__(self, root):
+        self.image2 = None
+        self.circle = None
+        self.mouse_x2 = None
+        self.mouse_y2 = None
+        self.rect = False
+        self.f9_activate = False
         self.second_window_canvas = None
         self.second_window = None
         self.wheel = None
@@ -44,11 +50,13 @@ class ImageViewerApp:
         self.rectangle_ROI_height = 0
         self.rectangle_ROI_zoom = 1.0
 
+        self.root = root
+        self.root.bind("<F9>", self.lock_image)
+
     def update_rectangle_size(self):
 
         min_rectangle_width = 10
         min_rectangle_height = min_rectangle_width * self.image_aspect_ratio
-
 
         max_zoom = float(self.image_height / min_rectangle_height)
         min_zoom = 1.01
@@ -90,10 +98,8 @@ class ImageViewerApp:
         self.rectangle_ROI_width = self.image_width // self.rectangle_ROI_zoom_count
         self.rectangle_ROI_height = self.image_height // self.rectangle_ROI_zoom_count
 
-        a = 2
-
     def load_image_from_file(self):
-        file_path = Path(r"C:\Users\rafaelfc\Data\imgs\out_000001.jpg")
+        file_path = Path(r"/home/sinmec/imgs/out_000001.jpg")
         image = cv2.imread(str(file_path))
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
@@ -106,6 +112,21 @@ class ImageViewerApp:
         self.get_image_dimensions()
         self.initialize_rectangle_ROI()
         self.create_second_window()
+
+    def rectangle_test_second_window(self, event):
+        # this function creates a rectangle test on the second window
+
+        x1 = self.mouse_x2 - 10
+        x2 = self.mouse_x2 + 10
+        y1 = self.mouse_y2 - 10
+        y2 = self.mouse_y2 + 10
+        rectangle_color = (0, 255, 0)
+        rectangle_width = 2
+
+        rectangle = cv2.rectangle(self.zoomed_image.copy(), (x1, y1), (x2, y2), rectangle_color,
+                                  rectangle_width)
+
+        self.display_image_second_window(rectangle)
 
     def load_image_from_dialog(self):
         file_path = filedialog.askopenfilename(
@@ -130,13 +151,12 @@ class ImageViewerApp:
         x1, x2, y1, y2 = self.zoomed_image_coords
         image_ROI = self.image_original[y1:y2, x1:x2]
 
-        new_size = (int(self.rectangle_ROI_zoom * (x2-x1)),
-                    int(self.rectangle_ROI_zoom * (y2-y1)))
+        new_size = (int(self.rectangle_ROI_zoom * (x2 - x1)),
+                    int(self.rectangle_ROI_zoom * (y2 - y1)))
 
         self.zoomed_image = cv2.resize(image_ROI, new_size)
 
         self.second_window_canvas.config(width=new_size[0], height=new_size[1])
-
 
     def display_image_navigation_window(self):
         image = Image.fromarray(self.image)
@@ -145,39 +165,42 @@ class ImageViewerApp:
         self.image_navigation_canvas.create_image(0, 0, anchor=tk.NW, image=photo)
         self.image_navigation_canvas.photo = photo
 
-    def display_image_second_window(self):
-        image = Image.fromarray(self.zoomed_image)
-        photo = ImageTk.PhotoImage(image=image)
+    def display_image_second_window(self, img):
+        if img is None:
+            self.image2 = Image.fromarray(self.zoomed_image)
+            photo = ImageTk.PhotoImage(image=self.image2)
+            self.second_window_canvas.create_image(0, 0, anchor=tk.NW, image=photo)
+            self.second_window_canvas.photo = photo
+        else:
+            self.image2 = Image.fromarray(img)
+            photo = ImageTk.PhotoImage(image=self.image2)
+            self.second_window_canvas.create_image(0, 0, anchor=tk.NW, image=photo)
+            self.second_window_canvas.photo = photo
 
-        self.second_window_canvas.create_image(0, 0, anchor=tk.NW, image=photo)
-        self.second_window_canvas.photo = photo
-
-
-    def draw_circle_on_screen(self):
-        self.image = cv2.circle(self.image_original.copy(), (self.mouse_x, self.mouse_y), 5, (0, 0, 255), -1)
-        self.display_image_navigation_window()
+        self.second_window_canvas.bind("<Double-Button-1>", self.rectangle_test_second_window)
+        self.second_window_canvas.bind("<Motion>", self.on_mouse_motion_second_window)
 
     def on_mouse_motion(self, event):
         self.mouse_x = event.x
         self.mouse_y = event.y
-        self.update_rectangle_size()
-        self.draw_rectangle_ROI()
-        self.update_zoomed_image()
+        if not self.f9_activate:
+            self.update_rectangle_size()
+            self.draw_rectangle_ROI()
+            self.update_zoomed_image()
+            self.display_image_second_window(None)
         self.display_image_navigation_window()
-        self.display_image_second_window()
 
         print('window 1', event.x, event.y)
 
+    def lock_image(self, event):
+        self.f9_activate = not self.f9_activate
+        print(self.f9_activate)
+
     def on_mouse_motion_second_window(self, event):
-        self.mouse_x = event.x
-        self.mouse_y = event.y
+        self.mouse_x2 = event.x
+        self.mouse_y2 = event.y
 
         print('window 2', event.x, event.y)
-        # self.update_rectangle_size()
-        # self.draw_rectangle_ROI()
-        # self.update_zoomed_image()
-        # self.display_image_navigation_window()
-        # self.display_image_second_window()
 
     def on_mouse_wheel(self, event):
         if os.name == 'nt':
@@ -186,11 +209,10 @@ class ImageViewerApp:
             elif event.delta < 0:
                 self.rectangle_ROI_zoom_count -= 1
         elif os.name == 'posix':
-            pass
-
-
-
-
+            if event.num == 4:
+                self.rectangle_ROI_zoom_count += 1
+            elif event.num == 5:
+                self.rectangle_ROI_zoom_count -= 1
 
     def run(self):
         self.load_image_from_file()
@@ -199,14 +221,12 @@ class ImageViewerApp:
 
 
 if __name__ == "__main__":
-
     root = tk.Tk()
     app = ImageViewerApp(root)
     app.image_navigation_canvas.bind("<Motion>", app.on_mouse_motion)
     app.image_navigation_canvas.bind("<MouseWheel>", app.on_mouse_wheel)
-    if app.second_window_canvas is not None:
-        app.second_window_canvas.bind("<Motion>", app.on_mouse_motion_second_window)
-
+    app.image_navigation_canvas.bind("<Button-4>", app.on_mouse_wheel)
+    app.image_navigation_canvas.bind("<Button-5>", app.on_mouse_wheel)
+    # app.image_navigation_canvas.bind("<space>", app.space_bar) TODO: why it doesnt work?
 
     app.run()
-
