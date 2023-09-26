@@ -1,18 +1,12 @@
-import math
-import os
-from pathlib import Path
-
-import cv2
-import tkinter as tk
-from tkinter import filedialog
-
 import queue
 import threading
 import time
+import tkinter as tk
+from pathlib import Path
 
-
-import numpy as np
+import cv2
 from PIL import Image, ImageTk
+
 
 class MyWindow(tk.Toplevel):
     def __init__(self, parent, title, shared_queue):
@@ -20,6 +14,7 @@ class MyWindow(tk.Toplevel):
         self.title(title)
         self.label = tk.Label(self, text=f"This is {title}")
         self.label.pack()
+
 
 class ImageViewerApp:
     def __init__(self, root):
@@ -78,6 +73,7 @@ class ImageViewerApp:
     def run_window_2(self):
         self.window_2 = MyWindow(self.main_window, 'window_2', self.shared_queue)
         self.window_2_canvas = tk.Canvas(self.window_2, width=216, height=1024)
+
         self.window_2_canvas.pack()
 
         while True:
@@ -88,9 +84,21 @@ class ImageViewerApp:
 
             time.sleep(0.1)
 
+    # def update_status(self, canvas):
+    #     status_bar = tk.Label(canvas, text="Applying bitwise operation...", bd=1, relief=tk.SUNKEN, anchor=tk.W)
+    #     status_bar.pack(side=tk.BOTTOM, fill=tk.X)
+
     def on_key_press(self, event):
         print('barra de espaco')
         self.image = cv2.bitwise_not(self.image)
+        # self.update_status(self.window_2_canvas)
+
+    def on_key_press_threshold_image(self, event):
+        _, self.image = cv2.threshold(self.image_original, 200, 255,
+                                      cv2.THRESH_BINARY_INV)
+
+    def on_key_press_reset_image(self, event):
+        self.image = self.image_original.copy()
 
     def on_mouse_motion(self, event):
         self.mouse_x = event.x
@@ -108,6 +116,7 @@ class ImageViewerApp:
     def initialize_rectangle_ROI(self):
         self.rectangle_ROI_width = self.image_width // self.rectangle_ROI_zoom_count
         self.rectangle_ROI_height = self.image_height // self.rectangle_ROI_zoom_count
+
     #
     def load_image_from_file(self):
         file_path = Path(r"C:\Users\rafaelfc\Data\imgs\out_000001.jpg")
@@ -131,23 +140,22 @@ class ImageViewerApp:
         thread2.start()
 
     def run(self):
+
+        self.main_window.bind("<F9>", self.on_key_press_threshold_image)
+        self.main_window.bind("<F11>", self.on_key_press_reset_image)
+
         self.main_window.mainloop()
-
-
+        time.sleep(0.1)
 
 
 if __name__ == "__main__":
-
     root = tk.Tk()
     app = ImageViewerApp(root)
     app.start()
-
 
     # app.image_navigation_canvas.bind("<Motion>", app.on_mouse_motion)
     # app.image_navigation_canvas.bind("<MouseWheel>", app.on_mouse_wheel)
     # if app.second_window_canvas is not None:
     #     app.second_window_canvas.bind("<Motion>", app.on_mouse_motion_second_window)
 
-
     app.run()
-
