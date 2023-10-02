@@ -118,34 +118,26 @@ class ImageViewerApp:
         self.initialize_rectangle_ROI()
         self.create_second_window()
 
-    def rectangle_test_second_window(self, event):
+    def circle_test_second_window(self, event):
         # this function creates a rectangle test on the second window
+        circle_radius = int(10 * self.rectangle_ROI_zoom)
+        circle_color = (0, 255, 0)
+        circle_thickness = int(2 * self.rectangle_ROI_zoom)
 
-        x1 = self.mouse_x2 - 10
-        x2 = self.mouse_x2 + 10
-        y1 = self.mouse_y2 - 10
-        y2 = self.mouse_y2 + 10
-        rectangle_color = (0, 255, 0)
-        rectangle_width = 2
+        circle = cv2.circle(self.zoomed_image.copy(), (self.mouse_x2, self.mouse_y2), circle_radius,
+                            circle_color, circle_thickness)
 
-        rectangle2 = cv2.rectangle(self.zoomed_image.copy(), (x1, y1), (x2, y2), rectangle_color,
-                                  rectangle_width)
-        print('chegoua qui')
-        self.display_image_second_window(rectangle2)
+        self.display_image_second_window(circle)
 
-    def rectangle_clone_on_main_window(self, event):
-        x1 = self.mouse_rec_x - 5
-        x2 = self.mouse_rec_x + 5
-        y1 = self.mouse_rec_y - 5
-        y2 = self.mouse_rec_y + 5
+    def circle_clone_on_main_window(self, event):
+        circle_radius = int(15 / self.rectangle_ROI_zoom)
+        circle_color = (0, 255, 0)
+        circle_thickness = int(4 / self.rectangle_ROI_zoom)
 
-        rectangle_color = (0, 255, 0)
-        rectangle_width = 1
+        circle = cv2.circle(self.image.copy(), (self.mouse_rec_x, self.mouse_rec_y), circle_radius, circle_color,
+                            circle_thickness)
 
-        rectangle = cv2.rectangle(self.image.copy(), (x1, y1), (x2, y2), rectangle_color,
-                                  rectangle_width)
-
-        self.display_image_navigation_window(rectangle)
+        self.display_image_navigation_window(circle)
 
     def load_image_from_dialog(self):
         file_path = filedialog.askopenfilename(
@@ -189,8 +181,8 @@ class ImageViewerApp:
             self.image_navigation_canvas.create_image(0, 0, anchor=tk.NW, image=photo)
             self.image_navigation_canvas.photo = photo
 
-        self.second_window_canvas.bind("<Double-Button-1>", self.rectangle_clone_on_main_window)
-        self.second_window_canvas.bind("<Double-Button-1>", self.rectangle_test_second_window, add="+")
+        self.second_window_canvas.bind("<Double-Button-1>", self.circle_clone_on_main_window)
+        self.second_window_canvas.bind("<Double-Button-1>", self.circle_test_second_window, add="+")
         self.second_window_canvas.bind("<Motion>", self.on_mouse_motion_second_window)
 
     def display_image_second_window(self, img):
