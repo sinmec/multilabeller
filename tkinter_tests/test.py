@@ -189,8 +189,8 @@ class ImageViewerApp:
             self.image_navigation_canvas.create_image(0, 0, anchor=tk.NW, image=photo)
             self.image_navigation_canvas.photo = photo
 
-        self.second_window_canvas.bind("<Button-1>", self.rectangle_clone_on_main_window)
-        self.second_window_canvas.bind("<Double-Button-1>", self.rectangle_test_second_window)
+        self.second_window_canvas.bind("<Double-Button-1>", self.rectangle_clone_on_main_window)
+        self.second_window_canvas.bind("<Double-Button-1>", self.rectangle_test_second_window, add="+")
         self.second_window_canvas.bind("<Motion>", self.on_mouse_motion_second_window)
 
     def display_image_second_window(self, img):
