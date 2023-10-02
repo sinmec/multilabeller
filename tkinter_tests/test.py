@@ -226,11 +226,10 @@ class ImageViewerApp:
         self.mouse_x2 = event.x
         self.mouse_y2 = event.y
 
-        self.mouse_rec_x = self.mouse_x + (self.mouse_x2 // self.rectangle_ROI_width)
-        # Todo: instead of self.mouse_x, put the origin of the rectangle
-        self.mouse_rec_y = self.mouse_y + (self.mouse_y2 // self.rectangle_ROI_height)
-        # Todo: instead of self.mouse_y, put the origin of the rectangle
-        
+        self.mouse_rec_x = self.x1 + int(self.mouse_x2 / self.rectangle_ROI_zoom)
+                       
+        self.mouse_rec_y = self.y1 + int(self.mouse_y2 / self.rectangle_ROI_zoom)
+
         print(f'window 2:\n'
               f'x = {event.x}\n'
               f'y = {event.y}\n'
