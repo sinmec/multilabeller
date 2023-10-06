@@ -1,0 +1,23 @@
+
+test_image: "test/data/out_000001.jpg"
+
+root_window:
+  name: "Main Window"
+
+navigation_window:
+  title: "Navigation Window"
+
+annotation_window:
+  title: "Annotation Window"
+
+ROI:
+  ROI_zoom_step: 5
+
+mouse_motion:
+  windows: "<Motion>"
+
+mouse_wheel:
+  windows: "<MouseWheel>"
+
+left_mouse_click:
+  windows: "<Double-Button-1>"

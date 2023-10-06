@@ -106,10 +106,6 @@ class ImageViewerApp:
 
             time.sleep(0.001)
 
-    # def update_status(self, canvas):
-    #     status_bar = tk.Label(canvas, text="Applying bitwise operation...", bd=1, relief=tk.SUNKEN, anchor=tk.W)
-    #     status_bar.pack(side=tk.BOTTOM, fill=tk.X)
-
     def update_zoomed_image(self):
         x1, x2, y1, y2 = self.zoomed_image_coords
         image_ROI = self.image_original[y1:y2, x1:x2]
@@ -149,10 +145,6 @@ class ImageViewerApp:
         self.image = cv2.bitwise_not(self.image)
         self.zoomed_image = cv2.bitwise_not(self.zoomed_image)
         # self.update_status(self.window_2_canvas)
-
-    def on_key_press_threshold_image(self, event):
-        _, self.image = cv2.threshold(self.image_original, 200, 255,
-                                      cv2.THRESH_BINARY_INV)
 
     def on_key_press_reset_image(self, event):
         self.image = self.image_original.copy()
@@ -237,7 +229,7 @@ class ImageViewerApp:
                 self.rectangle_ROI_zoom_count -= 1
 
     def load_image_from_file(self):
-        file_path = Path(r"/home/sinmec/imgs/out_000001.jpg")
+        file_path = Path(r"out_000001.jpg")
         image = cv2.imread(str(file_path))
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
@@ -258,8 +250,6 @@ class ImageViewerApp:
         thread2.start()
 
     def run(self):
-
-        self.main_window.bind("<F9>", self.on_key_press_threshold_image)
         self.main_window.bind("<F11>", self.on_key_press_reset_image)
 
         self.main_window.mainloop()
@@ -271,10 +261,4 @@ if __name__ == "__main__":
 
     app = ImageViewerApp(root)
     app.start()
-
-    # app.image_navigation_canvas.bind("<Motion>", app.on_mouse_motion)
-    # app.image_navigation_canvas.bind("<MouseWheel>", app.on_mouse_wheel)
-    # if app.second_window_canvas is not None:
-    #     app.second_window_canvas.bind("<Motion>", app.on_mouse_motion_second_window)
-
     app.run()

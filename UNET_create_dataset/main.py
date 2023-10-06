@@ -26,7 +26,7 @@ window_name = "TEST"
 # Number of frame "jumps" in a video sequence. It's importat to have diverse samples
 N_jump = 1
 
-# Defining the image variable and reading the files
+# Defining the image_manipulator variable and reading the files
 image_files = os.listdir(image_file_folder)
 
 # Reading the images
@@ -44,7 +44,7 @@ N_imgs = len(imgs_global)
 random_array = np.arange(N_imgs)
 # np.random.shuffle(random_array)
 
-# Starting the image loop Here
+# Starting the image_manipulator loop Here
 for index_imgs in random_array:
 
     img_file = imgs_global[index_imgs]
@@ -64,13 +64,13 @@ for index_imgs in random_array:
     # Creating the visualisation window
     cv2.namedWindow(window_name, cv2.WINDOW_GUI_NORMAL)
 
-    # Reading the raw image file
+    # Reading the raw image_manipulator file
     img = cv2.imread(os.path.join(image_file_folder, img_file))
     img_grey = img[:, :, 0]
     img_raw = img.copy()
     image_rgb = img
 
-    # Reading the next image file (i+1)
+    # Reading the next image_manipulator file (i+1)
     # img_next = cv2.imread(os.path.join(image_file_folder, imgs_global[index_imgs+1]))
     img = cv2.imread(os.path.join(image_file_folder, img_file))
 
@@ -119,7 +119,7 @@ for index_imgs in random_array:
     #                          through the mouse the size and position
     addMode = None
 
-    # The show_mode variable controls which image to show
+    # The show_mode variable controls which image_manipulator to show
     # When dealing with piv images, is good to have a 'movement' idea
     # to know if we are seeing tracer particles or dispersed drops
     show_mode = 'current_image'
@@ -255,7 +255,7 @@ for index_imgs in random_array:
             h5_file.close()
 
         if key == 110:  # key n
-            print('Moving to the next image')
+            print('Moving to the next image_manipulator')
             break
 
         if key == 105:  # key i
