@@ -15,9 +15,14 @@ ROI:
 
 mouse_motion:
   windows: "<Motion>"
+  linux: "<Motion>"
 
 mouse_wheel:
   windows: "<MouseWheel>"
+  linux:
+    bind1: "<Button-4>"
+    bind2: "<Button-5>"
 
 left_mouse_click:
   windows: "<Double-Button-1>"
+  linux: "<Double-Button-1>"

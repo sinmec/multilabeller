@@ -74,6 +74,11 @@ class Window(tk.Toplevel):
                 self.image_manipulator.rectangle_ROI_zoom_count += 1  # TODO: Add step as option
             elif event.delta < 0:
                 self.image_manipulator.rectangle_ROI_zoom_count -= 1  # TODO: Add step as option
+        if os.name == 'posix':
+            if event.num == 4:
+                self.image_manipulator.rectangle_ROI_zoom_count += 1
+            elif event.num == 5:
+                self.image_manipulator.rectangle_ROI_zoom_count -= 1
 
     def lock_image(self, event):
         self.annotation_mode = not self.annotation_mode  # TODO: Think of a better name

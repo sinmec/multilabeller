@@ -31,7 +31,7 @@ class ImageManipulator:
 
     def initialize_rectangle_ROI(self):
         self.rectangle_ROI_width = self.image_original_width // self.rectangle_ROI_zoom_count
-        self.rectangle_ROI_height = self.image_original_height // self.rectangle_ROI_zoom_count
+        self.rectangle_ROI_height = self.image_original_width // self.rectangle_ROI_zoom_count
 
     def update_rectangle_size(self):
         min_rectangle_width = 10
@@ -53,12 +53,13 @@ class ImageManipulator:
 
         # TODO: Better names, those are the rectangle ROI points!
         self.x1 = int(mouse_x - self.rectangle_ROI_width / 2)
-        self.y1 = int(mouse_y - self.rectangle_ROI_height / 2)
+        self.y1 = int(mouse_y - self.rectangle_ROI_width / 2)
         self.x2 = int(mouse_x + self.rectangle_ROI_width / 2)
-        self.y2 = int(mouse_y + self.rectangle_ROI_height / 2)
+        self.y2 = int(mouse_y + self.rectangle_ROI_width / 2)
 
         self.x1 = max(2, self.x1)
         self.y1 = max(2, self.y1)
+
         self.x2 = min(self.image_original_width - 2, self.x2)
         self.y2 = min(self.image_original_height + 2, self.y2)
 
@@ -72,8 +73,10 @@ class ImageManipulator:
         x1, x2, y1, y2 = self.zoomed_image_coordinates
         image_ROI = self.image_original[y1:y2, x1:x2]
 
-        new_size = (int(self.rectangle_ROI_zoom * (x2 - x1)),
-                    int(self.rectangle_ROI_zoom * (y2 - y1)))
+        # new_size = (int(self.rectangle_ROI_zoom * (x2 - x1)),
+        #            int(self.rectangle_ROI_zoom * (y2 - y1)))
+
+        new_size = (int(self.rectangle_ROI_zoom * (x2 - x1)) * 3, int(self.rectangle_ROI_zoom * (y2 - y1)) * 3)
 
         self.zoomed_image = cv2.resize(image_ROI, new_size)
         self.zoomed_image_clean = self.zoomed_image  # TODO:What is this _clean?
@@ -94,6 +97,6 @@ class ImageManipulator:
         # TODO: This is dumb! Think on a smart solution!
         if (point_x is None) or (point_y is None):
             return None, None
-        point_x_translated = self.x1 + int(point_x / self.rectangle_ROI_zoom)
-        point_y_translated = self.y1 + int(point_y / self.rectangle_ROI_zoom)
+        point_x_translated = self.x1 + (int((point_x / self.rectangle_ROI_zoom) / 3))
+        point_y_translated = self.y1 + (int((point_y / self.rectangle_ROI_zoom) / 3))
         return point_x_translated, point_y_translated

@@ -10,7 +10,7 @@ import yaml
 from src.multilabeller.image_manipulator.image_manipulator import ImageManipulator
 from src.multilabeller.window.window import Window
 
-os_option = 'windows'
+os_option = 'linux'
 
 
 class ImageViewerApp:
@@ -46,22 +46,32 @@ class ImageViewerApp:
 
         self.image_manipulator = ImageManipulator(image)
 
-    def configure_window(self, window):
-        _width = self.image_manipulator.image_original_width
-        _height = self.image_manipulator.image_original_height
-        window.canvas = tk.Canvas(window, width=_width, height=_height)
-        window.canvas.pack()
+    def configure_window(self, window, w, h):
+        if w or h:
+            _width = w
+            _height = h
+            window.canvas = tk.Canvas(window, width=_width, height=_height)
+            window.canvas.pack()
+        else:
+            _width = self.image_manipulator.image_original_width
+            _height = self.image_manipulator.image_original_height
+            window.canvas = tk.Canvas(window, width=_width, height=_height)
+            window.canvas.pack()
 
     def initialize_windows(self):
         self.navigation_window = Window(self.root_window,
                                         self.config['navigation_window']['title'],
                                         self.shared_queue)
-        self.configure_window(self.navigation_window)
+        self.configure_window(self.navigation_window, None, None)
 
         self.annotation_window = Window(self.root_window,
                                         self.config['annotation_window']['title'],
                                         self.shared_queue)
-        self.configure_window(self.annotation_window)
+        self.configure_window(self.annotation_window, 500, 500)
+
+        # self.annotation_window.canvas = tk.Canvas(self.annotation_window, width=216, height=216)
+        # self.annotation_window.canvas.pack()
+
         self.setup_run()
 
     def setup_run(self):
@@ -72,8 +82,16 @@ class ImageViewerApp:
                 # TODO: Create a window handler. This is unnecessary
                 self.navigation_window.canvas.bind(self.config['mouse_motion'][os_option],
                                                    self.navigation_window.get_mouse_position)
-                self.navigation_window.canvas.bind(self.config['mouse_wheel'][os_option],
-                                                   self.navigation_window.modify_ROI_zoom)
+
+                if os_option == 'linux':
+                    self.navigation_window.canvas.bind(self.config['mouse_wheel'][os_option]['bind1'],
+                                                       self.navigation_window.modify_ROI_zoom)
+                    self.navigation_window.canvas.bind(self.config['mouse_wheel'][os_option]['bind2'],
+                                                       self.navigation_window.modify_ROI_zoom)
+                elif os_option == 'windows':
+                    self.navigation_window.canvas.bind(self.config['mouse_wheel'][os_option],
+                                                       self.navigation_window.modify_ROI_zoom)
+
                 self.navigation_window.bind("<F9>", self.navigation_window.lock_image)
 
                 if not self.navigation_window.annotation_mode:
@@ -90,7 +108,7 @@ class ImageViewerApp:
                 self.annotation_window.canvas.bind(self.config['mouse_motion'][os_option],
                                                    self.annotation_window.get_mouse_position)
 
-                if self.navigation_window.annotation_mode:
+                if self.navigation_window.annotation_mode: # Todo: when this is True, it creates a point, need to fix
                     self.annotation_window.canvas.bind(self.config['left_mouse_click'][os_option],
                                                        self.annotation_window.store_annotation_point)
 
