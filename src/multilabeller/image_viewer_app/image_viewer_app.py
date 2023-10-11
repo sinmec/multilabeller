@@ -67,7 +67,8 @@ class ImageViewerApp:
         self.annotation_window = Window(self.root_window,
                                         self.config['annotation_window']['title'],
                                         self.shared_queue)
-        self.configure_window(self.annotation_window, 500, 500)
+        self.configure_window(self.annotation_window, self.config['image_viewer']['width'],
+                              self.config['image_viewer']['height'])
 
         # self.annotation_window.canvas = tk.Canvas(self.annotation_window, width=216, height=216)
         # self.annotation_window.canvas.pack()

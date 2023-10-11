@@ -26,3 +26,7 @@ mouse_wheel:
 left_mouse_click:
   windows: "<Double-Button-1>"
   linux: "<Double-Button-1>"
+
+image_viewer:
+  width: 500
+  height: 500

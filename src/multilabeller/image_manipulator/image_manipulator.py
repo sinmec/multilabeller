@@ -1,9 +1,11 @@
 import cv2
 import numpy as np
+import yaml
 
 
 class ImageManipulator:
     def __init__(self, image):
+        self.config = None
         self.image_original = image.copy()
         self.zoomed_image_original = image.copy()
 
@@ -23,6 +25,7 @@ class ImageManipulator:
 
         self.get_image_dimensions()
         self.initialize_rectangle_ROI()
+        self.read_config_file()
 
     def get_image_dimensions(self):
         self.image_original_height, self.image_original_width, _ = self.image.shape
@@ -31,7 +34,7 @@ class ImageManipulator:
 
     def initialize_rectangle_ROI(self):
         self.rectangle_ROI_width = self.image_original_width // self.rectangle_ROI_zoom_count
-        self.rectangle_ROI_height = self.image_original_width // self.rectangle_ROI_zoom_count
+        self.rectangle_ROI_height = self.image_original_height // self.rectangle_ROI_zoom_count
 
     def update_rectangle_size(self):
         min_rectangle_width = 10
@@ -76,7 +79,8 @@ class ImageManipulator:
         # new_size = (int(self.rectangle_ROI_zoom * (x2 - x1)),
         #            int(self.rectangle_ROI_zoom * (y2 - y1)))
 
-        new_size = (int(self.rectangle_ROI_zoom * (x2 - x1)) * 3, int(self.rectangle_ROI_zoom * (y2 - y1)) * 3)
+        new_size = (int((self.rectangle_ROI_zoom * (x2 - x1) * (500 / self.image_original_width))),
+                    int((self.rectangle_ROI_zoom * (y2 - y1) * (500 / self.image_original_width))))
 
         self.zoomed_image = cv2.resize(image_ROI, new_size)
         self.zoomed_image_clean = self.zoomed_image  # TODO:What is this _clean?
@@ -89,14 +93,22 @@ class ImageManipulator:
         circle_color = (0, 255, 0)
         circle_thickness = -1
 
-        cv2.circle(image,
-                   (point_x, point_y),
-                   circle_radius, circle_color, circle_thickness)
+        cv2.circle(image, (point_x, point_y), circle_radius, circle_color, circle_thickness)
+
+    def read_config_file(self):
+        try:
+            with open("/home/sinmec/multilabeller/src/multilabeller/config.yml", "r") as config_file:
+                # TODO: think on a better way to import config.yaml
+                self.config = yaml.safe_load(config_file)
+        except FileExistsError:
+            print("Configuration file 'config.yml' was not found.")
 
     def translate_points(self, point_x, point_y):
         # TODO: This is dumb! Think on a smart solution!
         if (point_x is None) or (point_y is None):
             return None, None
-        point_x_translated = self.x1 + (int((point_x / self.rectangle_ROI_zoom) / 3))
-        point_y_translated = self.y1 + (int((point_y / self.rectangle_ROI_zoom) / 3))
+        point_x_translated = self.x1 + int((point_x / self.rectangle_ROI_zoom)
+                                           * (self.image_original_width / (self.config['image_viewer']['width'])))
+        point_y_translated = self.y1 + int((point_y / self.rectangle_ROI_zoom)
+                                           * (self.image_original_width / (self.config['image_viewer']['height'])))
         return point_x_translated, point_y_translated
