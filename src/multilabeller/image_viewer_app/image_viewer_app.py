@@ -3,14 +3,17 @@ import threading
 import time
 from pathlib import Path
 import tkinter as tk
-
+import os
 import cv2
 import yaml
 
 from src.multilabeller.image_manipulator.image_manipulator import ImageManipulator
 from src.multilabeller.window.window import Window
 
-os_option = 'linux'
+if os.name == 'nt':
+    os_option = 'windows'
+if os.name == 'posix':
+    os_option = 'linux'
 
 
 class ImageViewerApp:
