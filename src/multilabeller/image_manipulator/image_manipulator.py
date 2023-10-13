@@ -87,35 +87,29 @@ class ImageManipulator:
             (self.x2, self.y2),
             rectangle_color,
             rectangle_width,
-        )  # TODO: Why do we need this copy?
-        self.image_rectangle_clean = self.image.copy()  # TODO:What is this _clean?
+        )
 
     def update_zoomed_image(self):
         x1, x2, y1, y2 = self.zoomed_image_coordinates
         image_ROI = self.image_original[y1:y2, x1:x2]
 
+        new_width = (
+            self.rectangle_ROI_zoom
+            * (x2 - x1)
+            * (self.config["image_viewer"]["width"] / self.image_original_width)
+        )
+        new_height = (
+            self.rectangle_ROI_zoom
+            * (y2 - y1)
+            * (self.config["image_viewer"]["height"] / self.image_original_width)
+        )
+
         new_size = (
-            int(
-                (
-                    self.rectangle_ROI_zoom
-                    * (x2 - x1)
-                    * (self.config["image_viewer"]["width"] / self.image_original_width)
-                )
-            ),
-            int(
-                (
-                    self.rectangle_ROI_zoom
-                    * (y2 - y1)
-                    * (
-                        self.config["image_viewer"]["height"]
-                        / self.image_original_width
-                    )
-                )
-            ),
+            int(new_width),
+            int(new_height),
         )
 
         self.zoomed_image = cv2.resize(image_ROI, new_size)
-        self.zoomed_image_clean = self.zoomed_image  # TODO:What is this _clean?
 
     def draw_annotation_point(self, image, point_x, point_y):
         # TODO: This is dumb! Think on a smart solution!

@@ -154,17 +154,15 @@ class ImageViewerApp:
                         self.navigation_window.point_x,
                         self.navigation_window.point_y,
                     )
+                else:
+                    self.navigation_window.point_x = None
+                    self.navigation_window.point_y = None
+                    self.annotation_window.point_x = None
+                    self.annotation_window.point_y = None
 
                 time.sleep(0.01)
 
         self.annotation_window.loop = run_annotation_window
-
-    # TODO: Think on a smarter solution
-    def window_translator(self):
-        def translation_function(x1, y1):
-            self.mouse_rec_x = self.x1 + int(self.mouse_x2 / self.rectangle_ROI_zoom)
-
-            self.mouse_rec_y = self.y1 + int(self.mouse_y2 / self.rectangle_ROI_zoom)
 
     def start(self):
         self.load_image_from_file()
