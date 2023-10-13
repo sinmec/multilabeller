@@ -91,7 +91,6 @@ class Window(tk.Toplevel):
 
     def lock_image(self, event):
         self.annotation_mode = not self.annotation_mode  # TODO: Think of a better name
-        print(self.annotation_mode)
 
     def store_annotation_point(self, event):
         self.point_x = self.mouse_x

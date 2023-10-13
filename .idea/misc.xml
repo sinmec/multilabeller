@@ -1,4 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
+  <component name="Black">
+    <option name="enabledOnReformat" value="true" />
+    <option name="enabledOnSave" value="true" />
+    <option name="sdkUUID" value="f90f96f6-2392-4035-9a37-81d59d230146" />
+  </component>
   <component name="ProjectRootManager" version="2" project-jdk-name="nepa_soro" project-jdk-type="Python SDK" />
 </project>
