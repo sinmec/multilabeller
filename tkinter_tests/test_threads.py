@@ -1,7 +1,7 @@
-import tkinter as tk
+import queue
 import threading
 import time
-import queue
+import tkinter as tk
 
 
 class MyWindow(tk.Toplevel):

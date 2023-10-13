@@ -1,12 +1,12 @@
+import os
 import queue
 import threading
 import time
 import tkinter as tk
 from pathlib import Path
-import os
-import numpy as np
 
 import cv2
+import numpy as np
 from PIL import Image, ImageTk
 
 
@@ -78,11 +78,11 @@ class ImageViewerApp:
             window_canvas.title = window_title
 
     def run_window_1(self):
-        self.window_1 = MyWindow(self.main_window, 'window_1', self.shared_queue)
+        self.window_1 = MyWindow(self.main_window, "window_1", self.shared_queue)
         self.window_1_canvas = tk.Canvas(self.window_1, width=216, height=1024)
         self.window_1_canvas.pack()
         while True:
-            self.display_image_window(self.window_1_canvas, 'window_1-test')
+            self.display_image_window(self.window_1_canvas, "window_1-test")
             self.window_1_canvas.bind("<Motion>", self.on_mouse_motion)
             self.window_1_canvas.bind("<Button-4>", self.on_mouse_wheel)
             self.window_1_canvas.bind("<Button-5>", self.on_mouse_wheel)
@@ -91,18 +91,22 @@ class ImageViewerApp:
             time.sleep(0.001)
 
     def run_window_2(self):
-        self.window_2 = MyWindow(self.main_window, 'window_2', self.shared_queue)
+        self.window_2 = MyWindow(self.main_window, "window_2", self.shared_queue)
         self.window_2_canvas = tk.Canvas(self.window_2, width=216, height=1024)
 
         self.window_2_canvas.pack()
 
         while True:
-            self.display_image_window(self.window_2_canvas, 'window_2-test')
+            self.display_image_window(self.window_2_canvas, "window_2-test")
             self.window_2_canvas.bind("<Motion>", self.on_mouse_motion_second_window)
             self.window_2_canvas.bind("<Enter>", self.set_focus_to_current_window)
             self.window_2_canvas.bind("<space>", self.on_key_press)
-            self.window_2_canvas.bind("<Double-Button-1>", self.circle_clone_on_main_window)
-            self.window_2_canvas.bind("<Double-Button-1>", self.circle_test_second_window, add="+")
+            self.window_2_canvas.bind(
+                "<Double-Button-1>", self.circle_clone_on_main_window
+            )
+            self.window_2_canvas.bind(
+                "<Double-Button-1>", self.circle_test_second_window, add="+"
+            )
 
             time.sleep(0.001)
 
@@ -110,12 +114,14 @@ class ImageViewerApp:
         x1, x2, y1, y2 = self.zoomed_image_coords
         image_ROI = self.image_original[y1:y2, x1:x2]
 
-        new_size = (int(self.rectangle_ROI_zoom * (x2 - x1)),
-                    int(self.rectangle_ROI_zoom * (y2 - y1)))
+        new_size = (
+            int(self.rectangle_ROI_zoom * (x2 - x1)),
+            int(self.rectangle_ROI_zoom * (y2 - y1)),
+        )
 
         self.zoomed_image = cv2.resize(image_ROI, new_size)
         self.zoomed_image_clean = self.zoomed_image
-        
+
         self.window_2_canvas.config(width=new_size[0], height=new_size[1])
 
     def circle_test_second_window(self, event):
@@ -126,8 +132,13 @@ class ImageViewerApp:
 
         self.zoomed_image = self.zoomed_image_clean
 
-        self.zoomed_image = cv2.circle(self.zoomed_image.copy(), (self.mouse_x2, self.mouse_y2), circle_radius,
-                                       circle_color, circle_thickness)
+        self.zoomed_image = cv2.circle(
+            self.zoomed_image.copy(),
+            (self.mouse_x2, self.mouse_y2),
+            circle_radius,
+            circle_color,
+            circle_thickness,
+        )
 
         # self.display_image_second_window(circle)
 
@@ -138,8 +149,13 @@ class ImageViewerApp:
 
         self.image = self.image_rectangle_clean
 
-        self.image = cv2.circle(self.image.copy(), (self.mouse_rec_x, self.mouse_rec_y), circle_radius, circle_color,
-                                circle_thickness)
+        self.image = cv2.circle(
+            self.image.copy(),
+            (self.mouse_rec_x, self.mouse_rec_y),
+            circle_radius,
+            circle_color,
+            circle_thickness,
+        )
 
     def on_key_press(self, event):
         self.image = cv2.bitwise_not(self.image)
@@ -190,13 +206,14 @@ class ImageViewerApp:
 
         h = 1.0 / max_zoom
 
-        self.rectangle_ROI_zoom = np.clip(h * self.rectangle_ROI_zoom_count, min_zoom, max_zoom)
+        self.rectangle_ROI_zoom = np.clip(
+            h * self.rectangle_ROI_zoom_count, min_zoom, max_zoom
+        )
 
         self.rectangle_ROI_width = int(self.image_width / self.rectangle_ROI_zoom)
         self.rectangle_ROI_height = int(self.image_height / self.rectangle_ROI_zoom)
 
     def draw_rectangle_ROI(self):
-
         rectangle_color = (0, 255, 0)
         rectangle_width = 2
 
@@ -212,17 +229,22 @@ class ImageViewerApp:
 
         self.zoomed_image_coords = (self.x1, self.x2, self.y1, self.y2)
 
-        self.image = cv2.rectangle(self.image_original.copy(), (self.x1, self.y1), (self.x2, self.y2), rectangle_color,
-                                   rectangle_width)  # TODO: Why do we need this copy?
+        self.image = cv2.rectangle(
+            self.image_original.copy(),
+            (self.x1, self.y1),
+            (self.x2, self.y2),
+            rectangle_color,
+            rectangle_width,
+        )  # TODO: Why do we need this copy?
         self.image_rectangle_clean = self.image.copy()
 
     def on_mouse_wheel(self, event):
-        if os.name == 'nt':
+        if os.name == "nt":
             if event.delta > 0:
                 self.rectangle_ROI_zoom_count += 1
             elif event.delta < 0:
                 self.rectangle_ROI_zoom_count -= 1
-        elif os.name == 'posix':
+        elif os.name == "posix":
             if event.num == 4:
                 self.rectangle_ROI_zoom_count += 1
             elif event.num == 5:
@@ -244,8 +266,12 @@ class ImageViewerApp:
 
     def start(self):
         self.load_image_from_file()
-        thread1 = threading.Thread(target=self.run_window_1, )
-        thread2 = threading.Thread(target=self.run_window_2, )
+        thread1 = threading.Thread(
+            target=self.run_window_1,
+        )
+        thread2 = threading.Thread(
+            target=self.run_window_2,
+        )
         thread1.start()
         thread2.start()
 

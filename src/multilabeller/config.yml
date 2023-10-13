@@ -1,4 +1,3 @@
-
 test_image: "test/data/out_000001.jpg"
 
 root_window:
@@ -27,6 +26,7 @@ left_mouse_click:
   windows: "<Double-Button-1>"
   linux: "<Double-Button-1>"
 
+#TODO: It should work with any image size, but its not working. We'll check this out in the future
 image_viewer:
   width: 500
   height: 500

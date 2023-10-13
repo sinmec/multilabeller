@@ -1,24 +1,24 @@
+import os
 import queue
 import threading
 import time
-from pathlib import Path
 import tkinter as tk
-import os
+from pathlib import Path
+
 import cv2
 import yaml
 
 from src.multilabeller.image_manipulator.image_manipulator import ImageManipulator
 from src.multilabeller.window.window import Window
 
-if os.name == 'nt':
-    os_option = 'windows'
-if os.name == 'posix':
-    os_option = 'linux'
+if os.name == "nt":
+    os_option = "windows"
+if os.name == "posix":
+    os_option = "linux"
 
 
 class ImageViewerApp:
     def __init__(self, root):
-
         self.root_window = root
         self.image_manipulator = None
         self.config = None
@@ -38,7 +38,7 @@ class ImageViewerApp:
             print("Configuration file 'config.yml' was not found.")
 
     def initialize_main_window(self):
-        self.root_window.title(self.config['root_window']['name'])
+        self.root_window.title(self.config["root_window"]["name"])
 
     def initialize_queue(self):
         self.shared_queue = queue.Queue()
@@ -47,7 +47,7 @@ class ImageViewerApp:
         file_path = Path(self.config["test_image"])
         image = cv2.imread(str(file_path), 1)
 
-        self.image_manipulator = ImageManipulator(image)
+        self.image_manipulator = ImageManipulator(image, self.config)
 
     def configure_window(self, window, w, h):
         if w or h:
@@ -62,19 +62,25 @@ class ImageViewerApp:
             window.canvas.pack()
 
     def initialize_windows(self):
-        self.navigation_window = Window(self.root_window,
-                                        self.config['navigation_window']['title'],
-                                        self.shared_queue)
+        self.navigation_window = Window(
+            self.root_window,
+            self.config["navigation_window"]["title"],
+            self.config,
+            self.shared_queue,
+        )
         self.configure_window(self.navigation_window, None, None)
 
-        self.annotation_window = Window(self.root_window,
-                                        self.config['annotation_window']['title'],
-                                        self.shared_queue)
-        self.configure_window(self.annotation_window, self.config['image_viewer']['width'],
-                              self.config['image_viewer']['height'])
-
-        # self.annotation_window.canvas = tk.Canvas(self.annotation_window, width=216, height=216)
-        # self.annotation_window.canvas.pack()
+        self.annotation_window = Window(
+            self.root_window,
+            self.config["annotation_window"]["title"],
+            self.config,
+            self.shared_queue,
+        )
+        self.configure_window(
+            self.annotation_window,
+            self.config["image_viewer"]["width"],
+            self.config["image_viewer"]["height"],
+        )
 
         self.setup_run()
 
@@ -84,17 +90,25 @@ class ImageViewerApp:
             while True:
                 self.navigation_window.display_image()
                 # TODO: Create a window handler. This is unnecessary
-                self.navigation_window.canvas.bind(self.config['mouse_motion'][os_option],
-                                                   self.navigation_window.get_mouse_position)
+                self.navigation_window.canvas.bind(
+                    self.config["mouse_motion"][os_option],
+                    self.navigation_window.get_mouse_position,
+                )
 
-                if os_option == 'linux':
-                    self.navigation_window.canvas.bind(self.config['mouse_wheel'][os_option]['bind1'],
-                                                       self.navigation_window.modify_ROI_zoom)
-                    self.navigation_window.canvas.bind(self.config['mouse_wheel'][os_option]['bind2'],
-                                                       self.navigation_window.modify_ROI_zoom)
-                elif os_option == 'windows':
-                    self.navigation_window.canvas.bind(self.config['mouse_wheel'][os_option],
-                                                       self.navigation_window.modify_ROI_zoom)
+                if os_option == "linux":
+                    self.navigation_window.canvas.bind(
+                        self.config["mouse_wheel"][os_option]["bind1"],
+                        self.navigation_window.modify_ROI_zoom,
+                    )
+                    self.navigation_window.canvas.bind(
+                        self.config["mouse_wheel"][os_option]["bind2"],
+                        self.navigation_window.modify_ROI_zoom,
+                    )
+                elif os_option == "windows":
+                    self.navigation_window.canvas.bind(
+                        self.config["mouse_wheel"][os_option],
+                        self.navigation_window.modify_ROI_zoom,
+                    )
 
                 self.navigation_window.bind("<F9>", self.navigation_window.lock_image)
 
@@ -109,24 +123,37 @@ class ImageViewerApp:
             self.annotation_window.set_image_manipulator(self.image_manipulator)
             while True:
                 self.annotation_window.display_zoomed_image()
-                self.annotation_window.canvas.bind(self.config['mouse_motion'][os_option],
-                                                   self.annotation_window.get_mouse_position)
+                self.annotation_window.canvas.bind(
+                    self.config["mouse_motion"][os_option],
+                    self.annotation_window.get_mouse_position,
+                )
 
-                if self.navigation_window.annotation_mode: # Todo: when this is True, it creates a point, need to fix
-                    self.annotation_window.canvas.bind(self.config['left_mouse_click'][os_option],
-                                                       self.annotation_window.store_annotation_point)
+                if (
+                    self.navigation_window.annotation_mode
+                ):  # Todo: when this is True, it creates a point, need to fix
+                    self.annotation_window.canvas.bind(
+                        self.config["left_mouse_click"][os_option],
+                        self.annotation_window.store_annotation_point,
+                    )
 
-                    self.image_manipulator.draw_annotation_point(self.image_manipulator.zoomed_image,
-                                                                 self.annotation_window.point_x,
-                                                                 self.annotation_window.point_y)
+                    self.image_manipulator.draw_annotation_point(
+                        self.image_manipulator.zoomed_image,
+                        self.annotation_window.point_x,
+                        self.annotation_window.point_y,
+                    )
 
-                    (self.navigation_window.point_x, self.navigation_window.point_y) = (
-                        self.image_manipulator.translate_points(self.annotation_window.point_x,
-                                                                self.annotation_window.point_y))
+                    (
+                        self.navigation_window.point_x,
+                        self.navigation_window.point_y,
+                    ) = self.image_manipulator.translate_points(
+                        self.annotation_window.point_x, self.annotation_window.point_y
+                    )
 
-                    self.image_manipulator.draw_annotation_point(self.image_manipulator.image,
-                                                                 self.navigation_window.point_x,
-                                                                 self.navigation_window.point_y)
+                    self.image_manipulator.draw_annotation_point(
+                        self.image_manipulator.image,
+                        self.navigation_window.point_x,
+                        self.navigation_window.point_y,
+                    )
 
                 time.sleep(0.01)
 

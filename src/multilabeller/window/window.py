@@ -1,12 +1,11 @@
 import os
-import time
 import tkinter as tk
+
 from PIL import Image, ImageTk
-import yaml
 
 
 class Window(tk.Toplevel):
-    def __init__(self, parent, title, shared_queue):
+    def __init__(self, parent, title, config, shared_queue):
         super().__init__(parent)
 
         self.title_string = title
@@ -17,6 +16,7 @@ class Window(tk.Toplevel):
         self.shared_queue = shared_queue
         self.canvas = None
         self.loop = None
+        self.config = config
 
         self.image_manipulator = None
 
@@ -30,7 +30,7 @@ class Window(tk.Toplevel):
 
     def run(self):
         if self.loop is None:
-            print(f'Warning: No run action defined in window {self.title_string}.')
+            print(f"Warning: No run action defined in window {self.title_string}.")
             return
         self.loop()
 
@@ -40,7 +40,9 @@ class Window(tk.Toplevel):
     # TODO: Think on a solution to have only a single 'display_image'
     def display_image(self):
         if self.image_manipulator is None:
-            print(f'Warning: No image manipulator in window {self.title_string} was defined.')
+            print(
+                f"Warning: No image manipulator in window {self.title_string} was defined."
+            )
             return
         image = Image.fromarray(self.image_manipulator.image)
         photo = ImageTk.PhotoImage(image=image)
@@ -52,7 +54,9 @@ class Window(tk.Toplevel):
     #       We have an unnecessary 'display_zoomed_image' here!
     def display_zoomed_image(self):
         if self.image_manipulator is None:
-            print(f'Warning: No image manipulator in window {self.title_string} was defined.')
+            print(
+                f"Warning: No image manipulator in window {self.title_string} was defined."
+            )
             return
         image = Image.fromarray(self.image_manipulator.zoomed_image)
         photo = ImageTk.PhotoImage(image=image)
@@ -70,12 +74,16 @@ class Window(tk.Toplevel):
         self.image_manipulator.update_zoomed_image()
 
     def modify_ROI_zoom(self, event):
-        if os.name == 'nt':
+        if os.name == "nt":
             if event.delta > 0:
-                self.image_manipulator.rectangle_ROI_zoom_count += 1  # TODO: Add step as option
+                self.image_manipulator.rectangle_ROI_zoom_count += (
+                    1  # TODO: Add step as option
+                )
             elif event.delta < 0:
-                self.image_manipulator.rectangle_ROI_zoom_count -= 1  # TODO: Add step as option
-        if os.name == 'posix':
+                self.image_manipulator.rectangle_ROI_zoom_count -= (
+                    1  # TODO: Add step as option
+                )
+        if os.name == "posix":
             if event.num == 4:
                 self.image_manipulator.rectangle_ROI_zoom_count += 1
             elif event.num == 5:

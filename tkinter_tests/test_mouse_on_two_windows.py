@@ -63,10 +63,13 @@ class ImageViewerApp:
             self.second_window = tk.Toplevel(self.image_navigation_window)
             self.second_window.title("Zoomed")
 
-            self.second_window_canvas = tk.Canvas(self.second_window, width=216, height=1024)
+            self.second_window_canvas = tk.Canvas(
+                self.second_window, width=216, height=1024
+            )
             self.second_window_canvas.pack()
-            self.second_window_canvas.bind("<Motion>", self.on_mouse_motion_second_window)
-
+            self.second_window_canvas.bind(
+                "<Motion>", self.on_mouse_motion_second_window
+            )
 
     def display_image_navigation_window(self):
         image = Image.fromarray(self.image)
@@ -88,21 +91,21 @@ class ImageViewerApp:
         self.mouse_x = event.x
         self.mouse_y = event.y
 
-        print('window 1', event.x, event.y)
+        print("window 1", event.x, event.y)
 
     def on_mouse_motion_second_window(self, event):
         self.mouse_x = event.x
         self.mouse_y = event.y
 
-        print('window 2', event.x, event.y)
+        print("window 2", event.x, event.y)
 
     def on_mouse_wheel(self, event):
-        if os.name == 'nt':
+        if os.name == "nt":
             if event.delta > 0:
                 self.rectangle_ROI_zoom_count += 1
             elif event.delta < 0:
                 self.rectangle_ROI_zoom_count -= 1
-        elif os.name == 'posix':
+        elif os.name == "posix":
             pass
 
     def run(self):
@@ -113,7 +116,6 @@ class ImageViewerApp:
 
 
 if __name__ == "__main__":
-
     root = tk.Tk()
     app = ImageViewerApp(root)
     app.image_navigation_canvas.bind("<Motion>", app.on_mouse_motion)

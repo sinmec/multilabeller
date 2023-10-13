@@ -1,15 +1,11 @@
-import math
 import os
-from pathlib import Path
-
-import cv2
 import tkinter as tk
+from pathlib import Path
 from tkinter import filedialog
 
+import cv2
 import numpy as np
 from PIL import Image, ImageTk
-
-
 
 
 class ImageViewerApp:
@@ -54,7 +50,6 @@ class ImageViewerApp:
         self.root.bind("<F9>", self.lock_image)
 
     def update_rectangle_size(self):
-
         min_rectangle_width = 10
         min_rectangle_height = min_rectangle_width * self.image_aspect_ratio
 
@@ -63,13 +58,14 @@ class ImageViewerApp:
 
         h = 1.0 / max_zoom
 
-        self.rectangle_ROI_zoom = np.clip(h * self.rectangle_ROI_zoom_count, min_zoom, max_zoom)
+        self.rectangle_ROI_zoom = np.clip(
+            h * self.rectangle_ROI_zoom_count, min_zoom, max_zoom
+        )
 
         self.rectangle_ROI_width = int(self.image_width / self.rectangle_ROI_zoom)
         self.rectangle_ROI_height = int(self.image_height / self.rectangle_ROI_zoom)
 
     def draw_rectangle_ROI(self):
-
         rectangle_color = (0, 255, 0)
         rectangle_width = 2
 
@@ -85,8 +81,13 @@ class ImageViewerApp:
 
         self.zoomed_image_coords = (x1, x2, y1, y2)
 
-        self.image = cv2.rectangle(self.image_original.copy(), (x1, y1), (x2, y2), rectangle_color,
-                                   rectangle_width)  # TODO: Why do we need this copy?
+        self.image = cv2.rectangle(
+            self.image_original.copy(),
+            (x1, y1),
+            (x2, y2),
+            rectangle_color,
+            rectangle_width,
+        )  # TODO: Why do we need this copy?
 
     def get_image_dimensions(self):
         self.image_height, self.image_width, _ = self.image.shape
@@ -123,14 +124,20 @@ class ImageViewerApp:
         rectangle_color = (0, 255, 0)
         rectangle_width = 2
 
-        rectangle = cv2.rectangle(self.zoomed_image.copy(), (x1, y1), (x2, y2), rectangle_color,
-                                  rectangle_width)
+        rectangle = cv2.rectangle(
+            self.zoomed_image.copy(),
+            (x1, y1),
+            (x2, y2),
+            rectangle_color,
+            rectangle_width,
+        )
 
         self.display_image_second_window(rectangle)
 
     def load_image_from_dialog(self):
         file_path = filedialog.askopenfilename(
-            filetypes=[("Image files", "*.png *.jpg *.jpeg *.gif *.bmp *.tif *.tiff")])
+            filetypes=[("Image files", "*.png *.jpg *.jpeg *.gif *.bmp *.tif *.tiff")]
+        )
         if file_path:
             image = cv2.imread(str(file_path))
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
@@ -144,15 +151,19 @@ class ImageViewerApp:
             self.second_window = tk.Toplevel(self.image_navigation_window)
             self.second_window.title("Zoomed")
 
-            self.second_window_canvas = tk.Canvas(self.second_window, width=216, height=1024)
+            self.second_window_canvas = tk.Canvas(
+                self.second_window, width=216, height=1024
+            )
             self.second_window_canvas.pack()
 
     def update_zoomed_image(self):
         x1, x2, y1, y2 = self.zoomed_image_coords
         image_ROI = self.image_original[y1:y2, x1:x2]
 
-        new_size = (int(self.rectangle_ROI_zoom * (x2 - x1)),
-                    int(self.rectangle_ROI_zoom * (y2 - y1)))
+        new_size = (
+            int(self.rectangle_ROI_zoom * (x2 - x1)),
+            int(self.rectangle_ROI_zoom * (y2 - y1)),
+        )
 
         self.zoomed_image = cv2.resize(image_ROI, new_size)
 
@@ -177,7 +188,9 @@ class ImageViewerApp:
             self.second_window_canvas.create_image(0, 0, anchor=tk.NW, image=photo)
             self.second_window_canvas.photo = photo
 
-        self.second_window_canvas.bind("<Double-Button-1>", self.rectangle_test_second_window)
+        self.second_window_canvas.bind(
+            "<Double-Button-1>", self.rectangle_test_second_window
+        )
         self.second_window_canvas.bind("<Motion>", self.on_mouse_motion_second_window)
 
     def on_mouse_motion(self, event):
@@ -190,7 +203,7 @@ class ImageViewerApp:
             self.display_image_second_window(None)
         self.display_image_navigation_window()
 
-        print('window 1', event.x, event.y)
+        print("window 1", event.x, event.y)
 
     def lock_image(self, event):
         self.f9_activate = not self.f9_activate
@@ -200,15 +213,15 @@ class ImageViewerApp:
         self.mouse_x2 = event.x
         self.mouse_y2 = event.y
 
-        print('window 2', event.x, event.y)
+        print("window 2", event.x, event.y)
 
     def on_mouse_wheel(self, event):
-        if os.name == 'nt':
+        if os.name == "nt":
             if event.delta > 0:
                 self.rectangle_ROI_zoom_count += 1
             elif event.delta < 0:
                 self.rectangle_ROI_zoom_count -= 1
-        elif os.name == 'posix':
+        elif os.name == "posix":
             if event.num == 4:
                 self.rectangle_ROI_zoom_count += 1
             elif event.num == 5:

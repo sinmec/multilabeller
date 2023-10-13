@@ -5,11 +5,15 @@ def add_ellipse_contours(event, x, y, flags, param):
     contour_collection = param[0]
     img = param[1]
     contour = contour_collection.contours[-1]
-    if event == cv2.EVENT_LBUTTONDBLCLK and not contour.commit:  # setting ellipse major points
+    if (
+        event == cv2.EVENT_LBUTTONDBLCLK and not contour.commit
+    ):  # setting ellipse major points
         contour.d_1_points[contour.d_1_idx][0] = x
         contour.d_1_points[contour.d_1_idx][1] = y
         contour.d_1_idx = 1 - contour.d_1_idx
-    elif event == cv2.EVENT_MBUTTONDOWN and not contour.commit:  # commiting ellipse major points
+    elif (
+        event == cv2.EVENT_MBUTTONDOWN and not contour.commit
+    ):  # commiting ellipse major points
         contour.d_1_points = tuple(contour.d_1_points)
         contour.commit = True
         contour.calculate_center()

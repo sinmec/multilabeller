@@ -7,9 +7,9 @@ def find_contours(img_UNET):
     img_contours = []
 
     # Finding the contours
-    contours, hierarchy = cv2.findContours(img_UNET,
-                                           cv2.RETR_EXTERNAL,
-                                           cv2.CHAIN_APPROX_NONE)
+    contours, hierarchy = cv2.findContours(
+        img_UNET, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE
+    )
     # Total number of contours
     N_contours = len(contours)
 
