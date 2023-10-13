@@ -34,7 +34,7 @@ class ellipse_contour(drawed_contour):
         y_2 = self.d_1_points[1][1]
         dx = x_2 - x_1
         dy = y_2 - y_1
-        d_1 = 0.5 * np.sqrt(dx ** 2.0 + dy ** 2.0)
+        d_1 = 0.5 * np.sqrt(dx**2.0 + dy**2.0)
         self.d_1 = int(d_1)
 
     def calculate_angle(self):
@@ -56,10 +56,9 @@ class ellipse_contour(drawed_contour):
         self.d_2 = max(self.d_2 - 1, 1)
 
     def list_to_contour(self):
-        ellipse_poly = cv2.ellipse2Poly((self.x_c, self.y_c),
-                                        (self.d_1, self.d_2),
-                                        int(self.angle),
-                                        360, 1, 1)
+        ellipse_poly = cv2.ellipse2Poly(
+            (self.x_c, self.y_c), (self.d_1, self.d_2), int(self.angle), 360, 1, 1
+        )
         N_points = len(ellipse_poly)
         print(N_points)
         cv2_contour = np.zeros((N_points, 1, 2), dtype=int)

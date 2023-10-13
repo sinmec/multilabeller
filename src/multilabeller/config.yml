@@ -1,0 +1,32 @@
+test_image: "test/data/out_000001.jpg"
+
+root_window:
+  name: "Main Window"
+
+navigation_window:
+  title: "Navigation Window"
+
+annotation_window:
+  title: "Annotation Window"
+
+ROI:
+  ROI_zoom_step: 5
+
+mouse_motion:
+  windows: "<Motion>"
+  linux: "<Motion>"
+
+mouse_wheel:
+  windows: "<MouseWheel>"
+  linux:
+    bind1: "<Button-4>"
+    bind2: "<Button-5>"
+
+left_mouse_click:
+  windows: "<Double-Button-1>"
+  linux: "<Double-Button-1>"
+
+#TODO: It should work with any image size, but its not working. We'll check this out in the future
+image_viewer:
+  width: 500
+  height: 500
