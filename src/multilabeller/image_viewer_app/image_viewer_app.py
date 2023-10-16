@@ -142,6 +142,8 @@ class ImageViewerApp:
                         self.annotation_window.point_y,
                     )
 
+                    self.circle_points()
+
                     (
                         self.navigation_window.point_x,
                         self.navigation_window.point_y,
@@ -161,8 +163,15 @@ class ImageViewerApp:
                     self.annotation_window.point_y = None
 
                 time.sleep(0.01)
-
         self.annotation_window.loop = run_annotation_window
+
+    def circle_points(self):
+        circle_points = []
+        if len(circle_points) <= 2:
+            pt_x = self.annotation_window.point_x
+            pt_y = self.annotation_window.point_y
+            circle_points.append([pt_x, pt_y])
+            print(circle_points)
 
     def start(self):
         self.load_image_from_file()
