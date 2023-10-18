@@ -91,6 +91,9 @@ class ImageViewerApp:
             self.navigation_window.set_image_manipulator(self.image_manipulator)
 
             self.annotation_window.canvas.bind(self.config["left_mouse_click"][os_option],
+                                               self.annotation_window.store_annotation_point)
+
+            self.annotation_window.canvas.bind(self.config["left_mouse_click"][os_option],
                                                self.add_circle_points, add="+")
 
             while True:
@@ -135,11 +138,7 @@ class ImageViewerApp:
                     self.annotation_window.get_mouse_position,
                 )
 
-                if (
-                    self.navigation_window.annotation_mode
-                ):
-                    self.annotation_window.canvas.bind(self.config["left_mouse_click"][os_option],
-                                                       self.annotation_window.store_annotation_point, add="+")
+                if self.navigation_window.annotation_mode:
 
                     self.image_manipulator.draw_annotation_point(
                         self.image_manipulator.zoomed_image,
@@ -172,8 +171,9 @@ class ImageViewerApp:
         print(self.i)
 
         if self.i <= 1:
-            self.circle_points[self.i] = ([self.point_x, self.annotation_window.point_y])
-        self.i += 1
+            self.circle_points[self.i] = [self.annotation_window.point_x, self.annotation_window.point_y]
+            if self.i != 1:
+                self.i += 1
 
         print(self.circle_points)
 

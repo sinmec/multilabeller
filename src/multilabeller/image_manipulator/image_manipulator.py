@@ -4,6 +4,8 @@ import numpy as np
 
 class ImageManipulator:
     def __init__(self, image, config):
+        self.i = 0
+        self.circle_points = []
         self.config = config
         self.image_original = image.copy()
         self.zoomed_image_original = image.copy()
