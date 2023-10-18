@@ -163,6 +163,7 @@ class ImageViewerApp:
                         self.image_manipulator.zoomed_image,
                         self.circle_points
                     )
+                    self.i = 0
                 else:
                     self.navigation_window.point_x = None
                     self.navigation_window.point_y = None
