@@ -6,6 +6,7 @@ import tkinter as tk
 from pathlib import Path
 
 import cv2
+import numpy as np
 import yaml
 
 from src.multilabeller.image_manipulator.image_manipulator import ImageManipulator
@@ -138,8 +139,7 @@ class ImageViewerApp:
                     self.annotation_window.get_mouse_position,
                 )
 
-                if self.navigation_window.annotation_mode:
-
+                if self.navigation_window.annotation_mode and self.i <= 1:
                     self.image_manipulator.draw_annotation_point(
                         self.image_manipulator.zoomed_image,
                         self.annotation_window.point_x,
@@ -158,6 +158,11 @@ class ImageViewerApp:
                         self.navigation_window.point_x,
                         self.navigation_window.point_y,
                     )
+                elif self.i == 2:
+                    self.create_circle(
+                        self.image_manipulator.zoomed_image,
+                        self.circle_points
+                    )
                 else:
                     self.navigation_window.point_x = None
                     self.navigation_window.point_y = None
@@ -168,14 +173,32 @@ class ImageViewerApp:
         self.annotation_window.loop = run_annotation_window
 
     def add_circle_points(self, event):
-        print(self.i)
 
         if self.i <= 1:
             self.circle_points[self.i] = [self.annotation_window.point_x, self.annotation_window.point_y]
-            if self.i != 1:
+            if self.i < 1:
                 self.i += 1
+            else:
+                self.i = 2
 
         print(self.circle_points)
+
+    def create_circle(self, image, points):
+        circle_color = (0, 255, 0)
+        circle_thickness = 3
+
+        point_1 = points[0]
+        point_2 = points[1]
+
+        x1 = point_1[0]
+
+        center = [int((point_1[0] + point_2[0]) / 2), int((point_1[1] + point_2[1]) / 2)]
+
+        circle_radius = int(np.sqrt(pow((point_2[0] - center[0]), 2) + pow((point_2[1] - center[1]), 2)))
+
+        cv2.circle(
+            image, center, circle_radius, circle_color, circle_thickness
+        )
 
     def start(self):
         self.load_image_from_file()
