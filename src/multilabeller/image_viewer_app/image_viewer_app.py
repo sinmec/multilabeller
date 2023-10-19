@@ -11,6 +11,7 @@ import yaml
 
 from src.multilabeller.image_manipulator.image_manipulator import ImageManipulator
 from src.multilabeller.window.window import Window
+from src.multilabeller.circle import Circle
 
 if os.name == "nt":
     os_option = "windows"
@@ -20,7 +21,6 @@ if os.name == "posix":
 
 class ImageViewerApp:
     def __init__(self, root):
-        self.i = 0
         self.root_window = root
         self.image_manipulator = None
         self.config = None
@@ -31,7 +31,7 @@ class ImageViewerApp:
         self.read_config_file()
         self.initialize_main_window()
         self.initialize_queue()
-        self.circle_points = [None, None]
+        self.circle = Circle()
 
     def read_config_file(self):
         try:
@@ -95,7 +95,7 @@ class ImageViewerApp:
                                                self.annotation_window.store_annotation_point)
 
             self.annotation_window.canvas.bind(self.config["left_mouse_click"][os_option],
-                                               self.add_circle_points, add="+")
+                                               self.mouse_circle_callback, add="+")
 
             while True:
                 self.navigation_window.display_image()
@@ -139,7 +139,7 @@ class ImageViewerApp:
                     self.annotation_window.get_mouse_position,
                 )
 
-                if self.navigation_window.annotation_mode and self.i <= 1:
+                if self.navigation_window.annotation_mode and self.circle.i <= 1:
                     self.image_manipulator.draw_annotation_point(
                         self.image_manipulator.zoomed_image,
                         self.annotation_window.point_x,
@@ -158,12 +158,14 @@ class ImageViewerApp:
                         self.navigation_window.point_x,
                         self.navigation_window.point_y,
                     )
-                elif self.i == 2:
+                elif self.circle.i == 2:
                     self.create_circle(
-                        self.image_manipulator.zoomed_image,
-                        self.circle_points
+                        self.circle.points
                     )
-                    self.i = 0
+                    self.draw_circle(
+                        self.image_manipulator.zoomed_image
+                    )
+                    self.circle.i = 0
                 else:
                     self.navigation_window.point_x = None
                     self.navigation_window.point_y = None
@@ -173,32 +175,26 @@ class ImageViewerApp:
                 time.sleep(0.01)
         self.annotation_window.loop = run_annotation_window
 
-    def add_circle_points(self, event):
+    def mouse_circle_callback(self, event):
+        self.circle.add_circle_points(self.annotation_window.point_x, self.annotation_window.point_y)
+        # TODO: Need to think on a better way to do this
 
-        if self.i <= 1:
-            self.circle_points[self.i] = [self.annotation_window.point_x, self.annotation_window.point_y]
-            if self.i < 1:
-                self.i += 1
-            else:
-                self.i = 2
-
-        print(self.circle_points)
-
-    def create_circle(self, image, points):
-        circle_color = (0, 255, 0)
-        circle_thickness = 3
+    def create_circle(self, points):
+        self.circle_color = (0, 255, 0)
+        self.circle_thickness = 3
 
         point_1 = points[0]
         point_2 = points[1]
 
         x1 = point_1[0]
 
-        center = [int((point_1[0] + point_2[0]) / 2), int((point_1[1] + point_2[1]) / 2)]
+        self.center = [int((point_1[0] + point_2[0]) / 2), int((point_1[1] + point_2[1]) / 2)]
 
-        circle_radius = int(np.sqrt(pow((point_2[0] - center[0]), 2) + pow((point_2[1] - center[1]), 2)))
+        self.circle_radius = int(np.sqrt(pow((point_2[0] - self.center[0]), 2) + pow((point_2[1] - self.center[1]), 2)))
 
+    def draw_circle(self, image):
         cv2.circle(
-            image, center, circle_radius, circle_color, circle_thickness
+            image, self.center, self.circle_radius, self.circle_color, self.circle_thickness
         )
 
     def start(self):
