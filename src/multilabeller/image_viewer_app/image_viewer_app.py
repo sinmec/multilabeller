@@ -31,7 +31,7 @@ class ImageViewerApp:
         self.read_config_file()
         self.initialize_main_window()
         self.initialize_queue()
-        self.circle = Circle()
+        self.current_circle = Circle()
 
     def read_config_file(self):
         try:
@@ -139,7 +139,7 @@ class ImageViewerApp:
                     self.annotation_window.get_mouse_position,
                 )
 
-                if self.navigation_window.annotation_mode and self.circle.i <= 1:
+                if self.navigation_window.annotation_mode:
                     self.image_manipulator.draw_annotation_point(
                         self.image_manipulator.zoomed_image,
                         self.annotation_window.point_x,
@@ -158,14 +158,12 @@ class ImageViewerApp:
                         self.navigation_window.point_x,
                         self.navigation_window.point_y,
                     )
-                elif self.circle.i == 2:
                     self.create_circle(
-                        self.circle.points
+                        self.current_circle
                     )
                     self.draw_circle(
                         self.image_manipulator.zoomed_image
                     )
-                    self.circle.i = 0
                 else:
                     self.navigation_window.point_x = None
                     self.navigation_window.point_y = None
@@ -176,26 +174,27 @@ class ImageViewerApp:
         self.annotation_window.loop = run_annotation_window
 
     def mouse_circle_callback(self, event):
-        self.circle.add_circle_points(self.annotation_window.point_x, self.annotation_window.point_y)
+        self.current_circle.add_circle_points(self.annotation_window.point_x, self.annotation_window.point_y)
         # TODO: Need to think on a better way to do this
 
-    def create_circle(self, points):
-        self.circle_color = (0, 255, 0)
-        self.circle_thickness = 3
+    def create_circle(self, circle):
+        if self.current_circle.i == 2:
 
-        point_1 = points[0]
-        point_2 = points[1]
+            point_1 = circle.points[0]
+            point_2 = circle.points[1]
 
-        x1 = point_1[0]
+            self.center = [int((point_1[0] + point_2[0]) / 2), int((point_1[1] + point_2[1]) / 2)]
 
-        self.center = [int((point_1[0] + point_2[0]) / 2), int((point_1[1] + point_2[1]) / 2)]
-
-        self.circle_radius = int(np.sqrt(pow((point_2[0] - self.center[0]), 2) + pow((point_2[1] - self.center[1]), 2)))
+            self.circle_radius = int(np.sqrt(pow((point_2[0] - self.center[0]), 2) + pow((point_2[1] - self.center[1]), 2)))
 
     def draw_circle(self, image):
-        cv2.circle(
-            image, self.center, self.circle_radius, self.circle_color, self.circle_thickness
-        )
+        if self.current_circle.i == 2:
+            cv2.circle(
+                image, self.center, self.circle_radius, self.current_circle.color, self.current_circle.thickness
+            )
+            self.current_circle.i = 0
+        else:
+            pass
 
     def start(self):
         self.load_image_from_file()
