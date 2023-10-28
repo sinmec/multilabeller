@@ -32,7 +32,7 @@ class ImageViewerApp:
         self.read_config_file()
         self.initialize_main_window()
         self.initialize_queue()
-        self.current_circle = Circle()
+        self.current_circle = None
 
 
     def read_config_file(self):
@@ -100,7 +100,7 @@ class ImageViewerApp:
                                                self.mouse_circle_callback, add="+")
 
             while True:
-                self.navigation_window.display_image(self.image_manipulator.image)
+                self.navigation_window.display_image(self.image_manipulator.zoomed_image)
                 # TODO: Create a window handler. This is unnecessary
                 self.navigation_window.canvas.bind(
                     self.config["mouse_motion"][os_option],
@@ -135,11 +135,10 @@ class ImageViewerApp:
 
         def run_annotation_window():
             self.annotation_window.set_image_manipulator(self.image_manipulator)
-            while True:
-                self.annotation_window.display_image(self.image_manipulator.zoomed_image)
+            self.current_circle = Circle(self.image_manipulator.zoomed_image)
 
-                if self.current_circle.i == 0:
-                    self.clean_image = self.image_manipulator.zoomed_image.copy()
+            while True:
+                self.annotation_window.display_zoomed_image()
 
                 self.annotation_window.canvas.bind(
                     self.config["mouse_motion"][os_option],
@@ -195,16 +194,17 @@ class ImageViewerApp:
             self.circle_radius = int(np.sqrt(pow((point_2[0] - self.center[0]), 2) +
                                              pow((point_2[1] - self.center[1]), 2)))
 
-            self.image_manipulator.zoomed_image = self.clean_image
-
-
     def draw_circle(self, image):
         if self.current_circle.i == 2:
+            self.image_manipulator.zoomed_image = self.current_circle.zoomed_image
 
             cv2.circle(
                 image, self.center, self.circle_radius, self.current_circle.color, self.current_circle.thickness
             )
+
             self.current_circle.i = 0
+        elif self.current_circle == 0:
+            self.current_circle.zoomed_image = self.image_manipulator.zoomed_image
         else:
             pass
 

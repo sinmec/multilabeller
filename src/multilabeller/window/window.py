@@ -38,7 +38,7 @@ class Window(tk.Toplevel):
         self.image_manipulator = image_manipulator
 
     # TODO: Think on a solution to have only a single 'display_image'
-    def display_image(self):
+    def display_image(self, image):
         if self.image_manipulator is None:
             print(
                 f"Warning: No image manipulator in window {self.title_string} was defined."
