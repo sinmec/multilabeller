@@ -1,7 +1,6 @@
 class Circle:
-    def __init__(self, image):
+    def __init__(self):
         self.i = 0
-        self.zoomed_image = image
         self.points = [None, None]
         self.color = (0, 255, 0)
         self.thickness = 3
@@ -13,4 +12,3 @@ class Circle:
                 self.i += 1
             else:
                 self.i = 2
-
