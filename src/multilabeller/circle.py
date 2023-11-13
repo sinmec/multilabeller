@@ -10,7 +10,6 @@ class Circle:
         if self.i <= 1:
             self.points[self.i] = (point_x, point_y)
             self.translated_points[self.i] = (translated_point_x, translated_point_y)
-            print(self.translated_points)
             if self.i < 1:
                 self.i += 1
             else:

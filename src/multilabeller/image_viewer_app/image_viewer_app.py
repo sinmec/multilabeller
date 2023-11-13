@@ -12,6 +12,7 @@ import yaml
 from src.multilabeller.image_manipulator.image_manipulator import ImageManipulator
 from src.multilabeller.window.window import Window
 from src.multilabeller.circle import Circle
+from src.multilabeller.contour import Contour
 
 if os.name == "nt":
     os_option = "windows"
@@ -21,20 +22,25 @@ if os.name == "posix":
 
 class ImageViewerApp:
     def __init__(self, root):
+        self.contour_confirm = False
+        self.contours_list = []
+        self.contour_mode = False
         self.clean_manipulator_image = None
         self.j = 0
         self.clean_image = []
         self.root_window = root
         self.image_manipulator = None
         self.config = None
-
+        self.circle_mode = False
         self.navigation_window = None
         self.annotation_window = None
-
+        self.contour_id = -1
+        self.id = 0
         self.read_config_file()
         self.initialize_main_window()
         self.initialize_queue()
         self.current_circle = None
+        self.current_contour = None
 
 
     def read_config_file(self):
@@ -101,6 +107,8 @@ class ImageViewerApp:
             self.annotation_window.bind(self.config["left_mouse_click"][os_option],
                                         self.mouse_circle_callback, add="+")
 
+            self.annotation_window.bind('<Key>', self.trigger)
+
             while True:
                 self.navigation_window.display_image(self.image_manipulator.zoomed_image)
                 self.navigation_window.canvas.bind(
@@ -133,7 +141,6 @@ class ImageViewerApp:
 
         # TODO: Create Runner
 
-
         def run_annotation_window():
             self.annotation_window.set_image_manipulator(self.image_manipulator)
             self.current_circle = Circle()
@@ -147,39 +154,54 @@ class ImageViewerApp:
                 )
 
                 if self.navigation_window.annotation_mode:
-                    if self.current_circle.i != 0:
+                    if self.circle_mode:
+                        if self.current_circle.i != 0:
+                            self.image_manipulator.draw_annotation_point(
+                                self.image_manipulator.zoomed_image,
+                                self.annotation_window.point_x,
+                                self.annotation_window.point_y,
+                            )
+
+                        (
+                            self.navigation_window.point_x,
+                            self.navigation_window.point_y,
+                        ) = self.image_manipulator.translate_points(
+                            self.annotation_window.point_x, self.annotation_window.point_y
+                        )
+
+                        self.delete_points()
+
+                        self.create_circle(
+                            self.current_circle
+                        )
+
+                        self.draw_circle(
+                            self.image_manipulator.zoomed_image,
+                            self.image_manipulator.image
+                        )
+
+                    if self.contour_mode:
+                        if self.id != self.contour_id:
+                            self.contour_id = self.id
+                            self.current_contour = Contour(self.id)
+
                         self.image_manipulator.draw_annotation_point(
                             self.image_manipulator.zoomed_image,
                             self.annotation_window.point_x,
                             self.annotation_window.point_y,
                         )
 
-                    (
-                        self.navigation_window.point_x,
-                        self.navigation_window.point_y,
-                    ) = self.image_manipulator.translate_points(
-                        self.annotation_window.point_x, self.annotation_window.point_y
-                    )
-
-                    if self.current_circle.i != 0:
-                        self.image_manipulator.draw_annotation_point(
-                            self.image_manipulator.image,
+                        (
                             self.navigation_window.point_x,
                             self.navigation_window.point_y,
+                        ) = self.image_manipulator.translate_points(
+                            self.annotation_window.point_x, self.annotation_window.point_y
                         )
 
-                    print(self.navigation_window.point_x, self.navigation_window.point_y)
-
-                    self.delete_points()
-
-                    self.create_circle(
-                        self.current_circle
-                    )
-
-                    self.draw_circle(
-                        self.image_manipulator.zoomed_image,
-                        self.image_manipulator.image
-                    )
+                        if self.contour_confirm:
+                            self.contours_list.append(self.current_contour)
+                            self.id = self.id + 1
+                            self.contour_confirm = not self.contour_confirm
                 else:
                     self.navigation_window.point_x = None
                     self.navigation_window.point_y = None
@@ -189,18 +211,28 @@ class ImageViewerApp:
                 time.sleep(0.01)
         self.annotation_window.loop = run_annotation_window
 
-    def mouse_circle_callback(self, event):
-        (
-            self.navigation_window.point_x,
-            self.navigation_window.point_y,
-        ) = self.image_manipulator.translate_points(
-            self.annotation_window.point_x, self.annotation_window.point_y
-        )
-        # TODO: Need to fix this quick fix above
 
-        self.current_circle.add_circle_points(self.annotation_window.point_x, self.annotation_window.point_y,
-                                              self.navigation_window.point_x, self.navigation_window.point_y
-                                              )
+    def trigger(self, event):
+        if event.char == 'c':
+            self.contour_mode = not self.contour_mode
+        elif event.char == 'b':
+            self.circle_mode = not self.circle_mode
+        elif event.char == ' ':  # spacebar
+            self.contour_confirm = not self.contour_confirm
+
+    def mouse_circle_callback(self, event):
+        if self.circle_mode:
+            (
+                self.navigation_window.point_x,
+                self.navigation_window.point_y,
+            ) = self.image_manipulator.translate_points(
+                self.annotation_window.point_x, self.annotation_window.point_y
+            )
+            # TODO: Need to fix this quick fix above
+
+            self.current_circle.add_circle_points(self.annotation_window.point_x, self.annotation_window.point_y,
+                                                  self.navigation_window.point_x, self.navigation_window.point_y
+                                                  )
 
     def create_circle(self, circle):
         if self.current_circle.i == 2:
