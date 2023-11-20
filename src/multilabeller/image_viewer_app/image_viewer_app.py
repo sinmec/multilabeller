@@ -107,6 +107,9 @@ class ImageViewerApp:
             self.annotation_window.bind(self.config["left_mouse_click"][os_option],
                                         self.mouse_circle_callback, add="+")
 
+            self.annotation_window.bind(self.config["left_mouse_click"][os_option],
+                                        self.mouse_contour_callback, add="+")
+
             self.annotation_window.bind('<Key>', self.trigger)
 
             while True:
@@ -172,7 +175,7 @@ class ImageViewerApp:
                         self.delete_points()
 
                         self.create_circle(
-                            self.current_circle
+                            self.current_circle.points, self.current_circle.translated_points
                         )
 
                         self.draw_circle(
@@ -185,11 +188,21 @@ class ImageViewerApp:
                             self.contour_id = self.id
                             self.current_contour = Contour(self.id)
 
-                        self.image_manipulator.draw_annotation_point(
-                            self.image_manipulator.zoomed_image,
-                            self.annotation_window.point_x,
-                            self.annotation_window.point_y,
-                        )
+                        if self.current_contour.i == 0:
+                            self.clean_image = self.image_manipulator.zoomed_image.copy()
+                            self.clean_manipulator_image = self.image_manipulator.image.copy()
+                        else:
+                            self.image_manipulator.draw_annotation_point(
+                                self.image_manipulator.zoomed_image,
+                                self.annotation_window.point_x,
+                                self.annotation_window.point_y,
+                            )
+
+                            self.image_manipulator.draw_annotation_point(
+                                self.image_manipulator.image,
+                                self.navigation_window.point_x,
+                                self.navigation_window.point_y,
+                            )
 
                         (
                             self.navigation_window.point_x,
@@ -200,6 +213,16 @@ class ImageViewerApp:
 
                         if self.contour_confirm:
                             self.contours_list.append(self.current_contour)
+                            self.image_manipulator.zoomed_image = self.clean_image
+                            self.image_manipulator.image = self.clean_manipulator_image
+
+                            self.create_contour_lines(self.image_manipulator.zoomed_image,
+                                                      self.current_contour.points)
+
+                            self.create_contour_lines(self.image_manipulator.image,
+                                                      self.current_contour.translated_points)
+
+                            print(self.contours_list)
                             self.id = self.id + 1
                             self.contour_confirm = not self.contour_confirm
                 else:
@@ -211,12 +234,14 @@ class ImageViewerApp:
                 time.sleep(0.01)
         self.annotation_window.loop = run_annotation_window
 
-
     def trigger(self, event):
+
         if event.char == 'c':
             self.contour_mode = not self.contour_mode
+            self.circle_mode = False
         elif event.char == 'b':
             self.circle_mode = not self.circle_mode
+            self.contour_mode = False
         elif event.char == ' ':  # spacebar
             self.contour_confirm = not self.contour_confirm
 
@@ -228,35 +253,48 @@ class ImageViewerApp:
             ) = self.image_manipulator.translate_points(
                 self.annotation_window.point_x, self.annotation_window.point_y
             )
-            # TODO: Need to fix this quick fix above
+            # TODO: Need to fix this gambiarra above
 
             self.current_circle.add_circle_points(self.annotation_window.point_x, self.annotation_window.point_y,
                                                   self.navigation_window.point_x, self.navigation_window.point_y
                                                   )
 
-    def create_circle(self, circle):
+    def mouse_contour_callback(self, event):
+        if self.contour_mode:
+            (
+                self.navigation_window.point_x,
+                self.navigation_window.point_y,
+            ) = self.image_manipulator.translate_points(
+                self.annotation_window.point_x, self.annotation_window.point_y
+            )
+
+            # TODO: Need to fix this gambiarra above
+
+            self.current_contour.add_contour_points([self.annotation_window.point_x, self.annotation_window.point_y],
+                                                    [self.navigation_window.point_x, self.navigation_window.point_y])
+
+    def create_contour_lines(self, image, points_list):
+        for count, point in enumerate(points_list):
+            cv2.line(image, points_list[count], points_list[count - 1],
+                     self.current_contour.color, self.current_contour.thickness)
+
+    def create_circle(self, points, translated_points):
         if self.current_circle.i == 2:
 
             # circle on the annotation window
 
-            point_1 = circle.points[0]
-            point_2 = circle.points[1]
+            self.center = [int((points[0][0] + points[1][0]) / 2), int((points[0][1] + points[1][1]) / 2)]
 
-            self.center = [int((point_1[0] + point_2[0]) / 2), int((point_1[1] + point_2[1]) / 2)]
-
-            self.circle_radius = int(np.sqrt(pow((point_2[0] - self.center[0]), 2) +
-                                             pow((point_2[1] - self.center[1]), 2)))
+            self.circle_radius = int(np.sqrt(pow((points[1][0] - self.center[0]), 2) +
+                                             pow((points[1][1] - self.center[1]), 2)))
 
             # circle on the navigation window
 
-            point_1_translated = circle.translated_points[0]
-            point_2_translated = circle.translated_points[1]
+            self.translated_center = [int((translated_points[0][0] + translated_points[1][0]) / 2),
+                                      int((translated_points[0][1] + translated_points[1][1]) / 2)]
 
-            self.translated_center = [int((point_1_translated[0] + point_2_translated[0]) / 2),
-                                      int((point_1_translated[1] + point_2_translated[1]) / 2)]
-
-            self.translated_circle_radius = int(np.sqrt(pow((point_2_translated[0] - self.translated_center[0]), 2) +
-                                            pow((point_2_translated[1] - self.translated_center[1]), 2)))
+            self.translated_circle_radius = int(np.sqrt(pow((translated_points[1][0] - self.translated_center[0]), 2) +
+                                            pow((translated_points[1][1] - self.translated_center[1]), 2)))
             # todo: improve this
 
     def delete_points(self):
@@ -266,6 +304,8 @@ class ImageViewerApp:
         elif self.current_circle.i == 2:
             self.image_manipulator.zoomed_image = self.clean_image
             self.image_manipulator.image = self.clean_manipulator_image
+
+
 
     def draw_circle(self, image_annotation, image_manipulator):
         if self.current_circle.i == 2:

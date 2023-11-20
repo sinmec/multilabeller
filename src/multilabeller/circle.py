@@ -3,7 +3,7 @@ class Circle:
         self.i = 0
         self.points = [None, None]
         self.translated_points = [None, None]
-        self.color = (0, 255, 0)
+        self.color = (255, 0, 0)
         self.thickness = 3
 
     def add_circle_points(self, point_x, point_y, translated_point_x, translated_point_y):
