@@ -44,6 +44,7 @@ class ImageViewerApp:
         self.initialize_queue()
         self.current_contour = None
         self.select = Select()
+        self.selected_contours = []
 
     def read_config_file(self):
         try:
@@ -226,10 +227,12 @@ class ImageViewerApp:
                             self.image_manipulator.zoomed_image = self.clean_image
                             self.image_manipulator.image = self.clean_manipulator_image
 
-                            self.create_contour_lines(self.image_manipulator.zoomed_image,
+                            self.create_contour_lines(self.current_contour,
+                                                      self.image_manipulator.zoomed_image,
                                                       self.current_contour.points)
 
-                            self.create_contour_lines(self.image_manipulator.image,
+                            self.create_contour_lines(self.current_contour,
+                                                      self.image_manipulator.image,
                                                       self.current_contour.translated_points)
 
                             print(self.contours_list)
@@ -272,14 +275,41 @@ class ImageViewerApp:
                                           pow((point_y - obj.center[1]), 2) )
 
                 if dist_to_center <= obj.radius:
-                    if obj.color == (255, 0, 0): # vermelho = deselecionado
+                    if obj.color == (255, 0, 0):
                         obj.color = (0, 255, 0) # verde = selecionado
-                    else:
+                        self.selected_contours.append(obj)
+                        print(self.selected_contours)
+                    elif obj.color == (0, 255, 0): # vermelho = deselecionado
                         obj.color = (255, 0, 0)
+                        self.selected_contours.remove(obj)
+                        print(self.selected_contours)
 
                     self.update_circle(obj,
                                        self.image_manipulator.zoomed_image,
                                        self.image_manipulator.image)
+
+            if obj.__class__.__name__ == 'Contour':
+                point = (point_x, point_y)
+                cnt_points = np.array([obj.points], np.int32)
+                dist = cv2.pointPolygonTest(cnt_points, point, measureDist=True)
+
+                if dist >= 0:
+                    if obj.color == (255, 0, 0):
+                        obj.color = (0, 255, 0) # verde = selecionado
+                        self.selected_contours.append(obj)
+                        print(self.selected_contours)
+                    elif obj.color == (0, 255, 0): # vermelho = deselecionado
+                        obj.color = (255, 0, 0)
+                        self.selected_contours.remove(obj)
+                        print(self.selected_contours)
+
+                    self.create_contour_lines(obj,
+                                              self.image_manipulator.zoomed_image,
+                                              obj.points)
+
+                    self.create_contour_lines(obj,
+                                              self.image_manipulator.image,
+                                              obj.translated_points)
 
     def trigger(self, event):
         if event.char == 'c':
@@ -338,10 +368,10 @@ class ImageViewerApp:
             self.current_contour.add_contour_points([self.annotation_window.point_x, self.annotation_window.point_y],
                                                     [self.navigation_window.point_x, self.navigation_window.point_y])
 
-    def create_contour_lines(self, image, points_list):
-        for count, point in enumerate(points_list):
-            cv2.line(image, points_list[count], points_list[count - 1],
-                     self.current_contour.color, self.current_contour.thickness)
+    def create_contour_lines(self, obj, image, points):
+        for count, point in enumerate(points):
+            cv2.line(image, points[count], points[count - 1],
+                     obj.color, obj.thickness)
 
     def delete_points(self):
         if self.current_circle.i == 0:
