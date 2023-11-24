@@ -1,5 +1,5 @@
 class Circle:
-    def __init__(self):
+    def __init__(self, id):
         self.i = 0
         self.points = [None, None]
         self.translated_points = [None, None]

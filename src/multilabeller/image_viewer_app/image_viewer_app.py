@@ -35,11 +35,11 @@ class ImageViewerApp:
         self.navigation_window = None
         self.annotation_window = None
         self.contour_id = -1
+        self.circle_id = -1
         self.id = 0
         self.read_config_file()
         self.initialize_main_window()
         self.initialize_queue()
-        self.current_circle = None
         self.current_contour = None
 
     def read_config_file(self):
@@ -148,7 +148,6 @@ class ImageViewerApp:
 
         def run_annotation_window():
             self.annotation_window.set_image_manipulator(self.image_manipulator)
-            self.current_circle = Circle()
 
             while True:
                 self.annotation_window.display_zoomed_image()
@@ -160,7 +159,12 @@ class ImageViewerApp:
 
                 if self.navigation_window.annotation_mode:
                     if self.circle_mode:
+                        if self.id != self.circle_id:
+                            self.circle_id = self.id
+                            self.current_circle = Circle(self.id)
+
                         if self.current_circle.i != 0:
+
                             self.image_manipulator.draw_annotation_point(
                                 self.image_manipulator.zoomed_image,
                                 self.annotation_window.point_x,
@@ -224,7 +228,7 @@ class ImageViewerApp:
                             self.create_contour_lines(self.image_manipulator.image,
                                                       self.current_contour.translated_points)
 
-                            #print(self.contours_list)
+                            print(self.contours_list)
                             self.id = self.id + 1
                             self.contour_confirm = not self.contour_confirm
                 else:
@@ -316,8 +320,6 @@ class ImageViewerApp:
             self.image_manipulator.zoomed_image = self.clean_image
             self.image_manipulator.image = self.clean_manipulator_image
 
-
-
     def draw_circle(self, image_annotation, image_manipulator):
         if self.current_circle.i == 2:
             cv2.circle(
@@ -330,6 +332,11 @@ class ImageViewerApp:
             )
 
             self.current_circle.i = 0
+
+            self.contours_list.append(self.current_circle)
+            print(self.contours_list)
+            self.id += 1
+
         else:
             pass
 
