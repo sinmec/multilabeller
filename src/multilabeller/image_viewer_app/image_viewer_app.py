@@ -42,7 +42,6 @@ class ImageViewerApp:
         self.current_circle = None
         self.current_contour = None
 
-
     def read_config_file(self):
         try:
             with open("config.yml", "r") as config_file:
@@ -67,6 +66,9 @@ class ImageViewerApp:
             _width = w
             _height = h
             window.canvas = tk.Canvas(window, width=_width, height=_height)
+            window.status_bar = tk.Label(window, text="F9 -> Lock Image | C -> Contour Mode | B -> Circle Mode",
+                                         bd=1, relief=tk.SUNKEN, anchor=tk.W)
+            window.status_bar.pack(side=tk.BOTTOM, fill=tk.X)
             window.canvas.pack()
         else:
             _width = self.image_manipulator.image_original_width
@@ -222,7 +224,7 @@ class ImageViewerApp:
                             self.create_contour_lines(self.image_manipulator.image,
                                                       self.current_contour.translated_points)
 
-                            print(self.contours_list)
+                            #print(self.contours_list)
                             self.id = self.id + 1
                             self.contour_confirm = not self.contour_confirm
                 else:
@@ -239,11 +241,20 @@ class ImageViewerApp:
         if event.char == 'c':
             self.contour_mode = not self.contour_mode
             self.circle_mode = False
+            if self.contour_mode:
+                print('Contour mode on')
+            else:
+                print('Contour mode off')
         elif event.char == 'b':
             self.circle_mode = not self.circle_mode
             self.contour_mode = False
+            if self.circle_mode:
+                print('Circle mode on')
+            else:
+                print('Circle mode off')
         elif event.char == ' ':  # spacebar
             self.contour_confirm = not self.contour_confirm
+            print('Contour saved')
 
     def mouse_circle_callback(self, event):
         if self.circle_mode:
