@@ -23,6 +23,8 @@ if os.name == "posix":
 
 class ImageViewerApp:
     def __init__(self, root):
+        self.image_original = None
+        self.zoomed_image_original = None
         self.select_mode = False
         self.contour_confirm = False
         self.contours_list = []
@@ -70,7 +72,8 @@ class ImageViewerApp:
             _width = w
             _height = h
             window.canvas = tk.Canvas(window, width=_width, height=_height)
-            window.status_bar = tk.Label(window, text="F9 -> Lock Image | C -> Contour Mode | B -> Circle Mode | V -> Select Mode",
+            window.status_bar = tk.Label(window, text="F9 -> Lock Image | C -> Contour Mode | B -> Circle Mode |"
+                                                      " V -> Select Mode | Backspace -> Delete Contours",
                                          bd=1, relief=tk.SUNKEN, anchor=tk.W)
             window.status_bar.pack(side=tk.BOTTOM, fill=tk.X)
             window.canvas.pack()
@@ -143,7 +146,8 @@ class ImageViewerApp:
                         self.navigation_window.modify_ROI_zoom,
                     )
 
-                self.navigation_window.bind("<F9>", self.navigation_window.lock_image)
+                self.navigation_window.bind("<F9>", self.navigation_window.lock_image, add="+")
+                self.navigation_window.bind("<F9>", self.save_image, add="+")
 
                 if not self.navigation_window.annotation_mode:
                     self.navigation_window.draw_ROI()
@@ -165,6 +169,7 @@ class ImageViewerApp:
                 )
 
                 if self.navigation_window.annotation_mode:
+                
                     if self.circle_mode:
                         if self.id != self.circle_id:
                             self.circle_id = self.id
@@ -192,7 +197,6 @@ class ImageViewerApp:
                             self.image_manipulator.zoomed_image,
                             self.image_manipulator.image
                         )
-
 
                     if self.contour_mode:
                         if self.id != self.contour_id:
@@ -235,7 +239,7 @@ class ImageViewerApp:
                                                       self.image_manipulator.image,
                                                       self.current_contour.translated_points)
 
-                            print(self.contours_list)
+                            #print(self.contours_list)
                             self.id = self.id + 1
                             self.contour_confirm = not self.contour_confirm
 
@@ -262,6 +266,10 @@ class ImageViewerApp:
                 time.sleep(0.01)
         self.annotation_window.loop = run_annotation_window
 
+    def save_image(self, event):
+        self.zoomed_image_original = self.image_manipulator.zoomed_image.copy()
+        self.image_original = self.image_manipulator.image.copy()
+
     def mouse_select_callback(self, event):
         if self.select_mode:
             self.select.point_check()
@@ -278,11 +286,11 @@ class ImageViewerApp:
                     if obj.color == (255, 0, 0):
                         obj.color = (0, 255, 0) # verde = selecionado
                         self.selected_contours.append(obj)
-                        print(self.selected_contours)
+                        #print(self.selected_contours)
                     elif obj.color == (0, 255, 0): # vermelho = deselecionado
                         obj.color = (255, 0, 0)
                         self.selected_contours.remove(obj)
-                        print(self.selected_contours)
+                        #print(self.selected_contours)
 
                     self.update_circle(obj,
                                        self.image_manipulator.zoomed_image,
@@ -297,11 +305,11 @@ class ImageViewerApp:
                     if obj.color == (255, 0, 0):
                         obj.color = (0, 255, 0) # verde = selecionado
                         self.selected_contours.append(obj)
-                        print(self.selected_contours)
+                        #print(self.selected_contours)
                     elif obj.color == (0, 255, 0): # vermelho = deselecionado
                         obj.color = (255, 0, 0)
                         self.selected_contours.remove(obj)
-                        print(self.selected_contours)
+                        #print(self.selected_contours)
 
                     self.create_contour_lines(obj,
                                               self.image_manipulator.zoomed_image,
@@ -339,6 +347,8 @@ class ImageViewerApp:
         elif event.char == ' ':  # spacebar
             self.contour_confirm = not self.contour_confirm
             print('Contour saved')
+        elif event.keysym == 'BackSpace':
+            self.delete_selected_contours()
 
     def mouse_circle_callback(self, event):
         if self.circle_mode:
@@ -354,6 +364,27 @@ class ImageViewerApp:
                                                   self.navigation_window.point_x, self.navigation_window.point_y
                                                   )
 
+    def delete_selected_contours(self):
+        for selected in self.selected_contours:
+            if selected in self.contours_list:
+                self.contours_list.remove(selected)
+
+        self.recreate_contours()
+
+    def recreate_contours(self):
+        print('chegou aqui')
+        self.image_manipulator.zoomed_image = self.zoomed_image_original.copy()
+        self.image_manipulator.image = self.image_original.copy()
+        
+        for obj in self.contours_list:
+            if obj.__class__.__name__ == "Circle":
+                self.update_circle(obj, self.image_manipulator.zoomed_image,
+                                 self.image_manipulator.image)
+                print(f'printou o círculo {obj}')
+            elif obj.__class__.__name__ == "Contour":
+                self.create_contour_lines(obj, self.image_manipulator.zoomed_image, obj.points)
+                self.create_contour_lines(obj, self.image_manipulator.image, obj.translated_points)
+                print(f'printou o contorno {obj}')
     def mouse_contour_callback(self, event):
         if self.contour_mode:
             (
@@ -408,7 +439,7 @@ class ImageViewerApp:
 
     def add_circle_to_list(self, obj):
         self.contours_list.append(obj)
-        print(self.contours_list)
+        #print(self.contours_list)
         self.id += 1
 
     def start(self):
