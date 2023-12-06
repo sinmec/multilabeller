@@ -166,3 +166,4 @@ cython_debug/
 .h5
 /UNET_create_dataset/.idea/
 /UNET_create_dataset/
+/src/multilabeller/SAM/sam_vit_b_01ec64.pth
