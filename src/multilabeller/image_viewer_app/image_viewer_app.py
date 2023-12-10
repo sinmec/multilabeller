@@ -358,10 +358,19 @@ class ImageViewerApp:
             self.segmentation_id += 1
 
     def auto_segmentation(self):
+        print('started Auto Segmentation')
         self.segmentation = SegmentAnything(self.zoomed_image_original.copy())
+
         for contour in self.segmentation.contours:
+            for point in contour.points:
+                print(point)
+                if point:
+                    translated_point = self.image_manipulator.translate_points(point[0], point[1])
+                    contour.add_contour_points(None, translated_point)
+
             self.contours_list.append(contour)
             self.create_contour_lines(contour, self.image_manipulator.zoomed_image, contour.points)
+            self.create_contour_lines(contour, self.image_manipulator.image, contour.translated_points)
 
     def mouse_circle_callback(self, event):
         if self.circle_mode:
@@ -392,11 +401,9 @@ class ImageViewerApp:
             if obj.__class__.__name__ == "Circle":
                 self.update_circle(obj, self.image_manipulator.zoomed_image,
                                  self.image_manipulator.image)
-                print(f'printou o círculo {obj}')
             elif obj.__class__.__name__ == "Contour":
                 self.create_contour_lines(obj, self.image_manipulator.zoomed_image, obj.points)
                 self.create_contour_lines(obj, self.image_manipulator.image, obj.translated_points)
-                print(f'printou o contorno {obj}')
     def mouse_contour_callback(self, event):
         if self.contour_mode:
             (
