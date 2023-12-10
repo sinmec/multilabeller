@@ -9,8 +9,8 @@ from src.multilabeller.contour import Contour
 
 class SegmentAnything:
     def __init__(self, image_input):
-        self.image = cv2.cvtColor(cv2.imread(image_input, 0),
-                                  cv2.COLOR_BGR2RGB)
+        #self.image = cv2.cvtColor(image_input, cv2.COLOR_BGR2RGB)
+        self.image = image_input
 
         sam_checkpoint = "C:/Users/higor/Documents/projetos/multilabeller/src/multilabeller/SAM/sam_vit_b_01ec64.pth"
         model_type = "vit_b"
@@ -111,6 +111,3 @@ class SegmentAnything:
         self.show_outlines()
         plt.axis('off')
         plt.show()
-
-
-segmentation = SegmentAnything('C:/Users/higor/Documents/projetos/multilabeller/src/multilabeller/SAM/ql_0_high_10_raw.png')

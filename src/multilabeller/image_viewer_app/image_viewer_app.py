@@ -14,6 +14,7 @@ from src.multilabeller.window.window import Window
 from src.multilabeller.circle import Circle
 from src.multilabeller.contour import Contour
 from src.multilabeller.select import Select
+from src.multilabeller.SAM.sam import SegmentAnything
 
 if os.name == "nt":
     os_option = "windows"
@@ -47,6 +48,8 @@ class ImageViewerApp:
         self.current_contour = None
         self.select = Select()
         self.selected_contours = []
+        self.segmentation = None
+        self.segmentation_id = 0
 
     def read_config_file(self):
         try:
@@ -73,7 +76,8 @@ class ImageViewerApp:
             _height = h
             window.canvas = tk.Canvas(window, width=_width, height=_height)
             window.status_bar = tk.Label(window, text="F9 -> Lock Image | C -> Contour Mode | B -> Circle Mode |"
-                                                      " V -> Select Mode | Backspace -> Delete Contours",
+                                                      " V -> Select Mode | Backspace -> Delete Contours |"
+                                                      " S -> Auto Segmentation",
                                          bd=1, relief=tk.SUNKEN, anchor=tk.W)
             window.status_bar.pack(side=tk.BOTTOM, fill=tk.X)
             window.canvas.pack()
@@ -349,6 +353,15 @@ class ImageViewerApp:
             print('Contour saved')
         elif event.keysym == 'BackSpace':
             self.delete_selected_contours()
+        elif event.keysym == 's' and self.segmentation_id == 0:
+            self.auto_segmentation()
+            self.segmentation_id += 1
+
+    def auto_segmentation(self):
+        self.segmentation = SegmentAnything(self.zoomed_image_original.copy())
+        for contour in self.segmentation.contours:
+            self.contours_list.append(contour)
+            self.create_contour_lines(contour, self.image_manipulator.zoomed_image, contour.points)
 
     def mouse_circle_callback(self, event):
         if self.circle_mode:
@@ -372,7 +385,6 @@ class ImageViewerApp:
         self.recreate_contours()
 
     def recreate_contours(self):
-        print('chegou aqui')
         self.image_manipulator.zoomed_image = self.zoomed_image_original.copy()
         self.image_manipulator.image = self.image_original.copy()
         
