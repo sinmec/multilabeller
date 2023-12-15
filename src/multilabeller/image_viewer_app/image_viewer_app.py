@@ -15,6 +15,7 @@ from src.multilabeller.circle import Circle
 from src.multilabeller.contour import Contour
 from src.multilabeller.select import Select
 from src.multilabeller.SAM.sam import SegmentAnything
+from src.multilabeller.elipse import Elipse
 
 if os.name == "nt":
     os_option = "windows"
@@ -24,6 +25,8 @@ if os.name == "posix":
 
 class ImageViewerApp:
     def __init__(self, root):
+        self.ellipse_confirm = False
+        self.elipse_id = -1
         self.image_original = None
         self.zoomed_image_original = None
         self.select_mode = False
@@ -37,6 +40,7 @@ class ImageViewerApp:
         self.image_manipulator = None
         self.config = None
         self.circle_mode = False
+        self.elipse_mode = False
         self.navigation_window = None
         self.annotation_window = None
         self.contour_id = -1
@@ -75,9 +79,7 @@ class ImageViewerApp:
             _width = w
             _height = h
             window.canvas = tk.Canvas(window, width=_width, height=_height)
-            window.status_bar = tk.Label(window, text="F9 -> Lock Image | C -> Contour Mode | B -> Circle Mode |"
-                                                      " V -> Select Mode | Backspace -> Delete Contours |"
-                                                      " S -> Auto Segmentation",
+            window.status_bar = tk.Label(window, text=self.config["tk_label"]["text"],
                                          bd=1, relief=tk.SUNKEN, anchor=tk.W)
             window.status_bar.pack(side=tk.BOTTOM, fill=tk.X)
             window.canvas.pack()
@@ -126,7 +128,29 @@ class ImageViewerApp:
             self.annotation_window.bind(self.config["left_mouse_click"][os_option],
                                         self.mouse_select_callback, add="+")
 
+            self.annotation_window.bind(self.config["left_mouse_click"][os_option],
+                                        self.mouse_ellipse_callback, add="+")
+
+            self.annotation_window.bind(self.config["left_mouse_click"][os_option],
+                                        self.draw_point_mouse_callback, add="+")
+
             self.annotation_window.bind('<Key>', self.trigger)
+
+            if os_option == "linux":
+                self.annotation_window.bind(
+                    self.config["mouse_wheel"][os_option]["bind1"],
+                    self.y_ellipse_axis_callback, add="+",
+                )
+                self.annotation_window.bind(
+                    self.config["mouse_wheel"][os_option]["bind2"],
+                    self.y_ellipse_axis_callback, add="+",
+                )
+
+            elif os_option == "windows":
+                self.annotation_window.bind(
+                    self.config["mouse_wheel"][os_option],
+                    self.y_ellipse_axis_callback, add="+",
+                )
 
             while True:
                 self.navigation_window.display_image(self.image_manipulator.zoomed_image)
@@ -138,12 +162,13 @@ class ImageViewerApp:
                 if os_option == "linux":
                     self.navigation_window.canvas.bind(
                         self.config["mouse_wheel"][os_option]["bind1"],
-                        self.navigation_window.modify_ROI_zoom,
+                        self.navigation_window.modify_ROI_zoom, add="+",
                     )
                     self.navigation_window.canvas.bind(
                         self.config["mouse_wheel"][os_option]["bind2"],
-                        self.navigation_window.modify_ROI_zoom,
+                        self.navigation_window.modify_ROI_zoom, add="+",
                     )
+
                 elif os_option == "windows":
                     self.navigation_window.canvas.bind(
                         self.config["mouse_wheel"][os_option],
@@ -174,27 +199,12 @@ class ImageViewerApp:
 
                 if self.navigation_window.annotation_mode:
                 
-                    if self.circle_mode:
+                    if self.circle_mode:  # CIRCLE
                         if self.id != self.circle_id:
                             self.circle_id = self.id
                             self.current_circle = Circle(self.id)
 
-                        if self.current_circle.i != 0:
-
-                            self.image_manipulator.draw_annotation_point(
-                                self.image_manipulator.zoomed_image,
-                                self.annotation_window.point_x,
-                                self.annotation_window.point_y,
-                            )
-
-                        (
-                            self.navigation_window.point_x,
-                            self.navigation_window.point_y,
-                        ) = self.image_manipulator.translate_points(
-                            self.annotation_window.point_x, self.annotation_window.point_y
-                        )
-
-                        self.delete_points()
+                        self.delete_points(self.current_circle.i)
 
                         self.draw_circle(
                             self.current_circle,
@@ -202,7 +212,7 @@ class ImageViewerApp:
                             self.image_manipulator.image
                         )
 
-                    if self.contour_mode:
+                    if self.contour_mode:  # CONTOUR
                         if self.id != self.contour_id:
                             self.contour_id = self.id
                             self.current_contour = Contour(self.id)
@@ -210,25 +220,6 @@ class ImageViewerApp:
                         if self.current_contour.i == 0:
                             self.clean_image = self.image_manipulator.zoomed_image.copy()
                             self.clean_manipulator_image = self.image_manipulator.image.copy()
-                        else:
-                            self.image_manipulator.draw_annotation_point(
-                                self.image_manipulator.zoomed_image,
-                                self.annotation_window.point_x,
-                                self.annotation_window.point_y,
-                            )
-
-                            self.image_manipulator.draw_annotation_point(
-                                self.image_manipulator.image,
-                                self.navigation_window.point_x,
-                                self.navigation_window.point_y,
-                            )
-
-                        (
-                            self.navigation_window.point_x,
-                            self.navigation_window.point_y,
-                        ) = self.image_manipulator.translate_points(
-                            self.annotation_window.point_x, self.annotation_window.point_y
-                        )
 
                         if self.contour_confirm:
                             self.contours_list.append(self.current_contour)
@@ -247,14 +238,23 @@ class ImageViewerApp:
                             self.id = self.id + 1
                             self.contour_confirm = not self.contour_confirm
 
-                    if self.select_mode:
-                        if self.select.i != 0: # TODO: GAMBIARRA
+                    if self.elipse_mode:  # ELLIPSE
+                        if self.id != self.elipse_id:
+                            self.id = self.elipse_id
+                            self.current_elipse = Elipse(self.elipse_id)
 
-                            # self.image_manipulator.draw_annotation_point(
-                            #     self.image_manipulator.zoomed_image,
-                            #     self.annotation_window.point_x,
-                            #     self.annotation_window.point_y,
-                            # )
+                        if self.current_elipse.i == 2:
+                            self.image_manipulator.zoomed_image = self.clean_image.copy()
+                            self.image_manipulator.image = self.clean_manipulator_image.copy()
+                            self.create_ellipse(self.current_elipse)
+
+                        if self.contour_confirm:
+                            self.contours_list.append(self.current_elipse)
+                            self.id += 1
+                            self.contour_confirm = not self.contour_confirm
+
+                    if self.select_mode:  # SELECT
+                        if self.select.i != 0:
 
                             if self.annotation_window.point_x and self.annotation_window.point_y:
                                 self.select_contour(self.annotation_window.point_x, self.annotation_window.point_y)
@@ -270,6 +270,50 @@ class ImageViewerApp:
                 time.sleep(0.01)
         self.annotation_window.loop = run_annotation_window
 
+    def ellipse_confirm_callback(self, event):
+        self.ellipse_confirm = True
+
+    def draw_point_mouse_callback(self, event):
+        if self.elipse_mode:
+            if self.current_elipse.i < 2:
+
+                if self.current_elipse.i == 0:
+                    self.clean_image = self.image_manipulator.zoomed_image.copy()
+                    self.clean_manipulator_image = self.image_manipulator.image.copy()
+                    print('salvou a imagem')
+                self.draw_points_functions()
+
+                if self.current_elipse.i == 1:
+                    self.current_elipse.create_initial_ellipse()
+                self.current_elipse.increase_ellipse_counter()
+
+        if self.contour_mode:
+            if self.current_contour.i != 0:
+                self.draw_points_functions()
+        if self.circle_mode:
+            if self.current_circle.i == 1:
+                self.draw_points_functions()
+
+    def draw_points_functions(self):
+        self.image_manipulator.draw_annotation_point(
+            self.image_manipulator.zoomed_image,
+            self.annotation_window.point_x,
+            self.annotation_window.point_y,
+        )
+
+        self.image_manipulator.draw_annotation_point(
+            self.image_manipulator.image,
+            self.navigation_window.point_x,
+            self.navigation_window.point_y,
+        )
+
+        (
+            self.navigation_window.point_x,
+            self.navigation_window.point_y,
+        ) = self.image_manipulator.translate_points(
+            self.annotation_window.point_x, self.annotation_window.point_y
+        )
+
     def save_image(self, event):
         self.zoomed_image_original = self.image_manipulator.zoomed_image.copy()
         self.image_original = self.image_manipulator.image.copy()
@@ -281,6 +325,37 @@ class ImageViewerApp:
     def select_contour(self, point_x, point_y):
 
         for obj in self.contours_list:
+
+            if obj.__class__.__name__ == 'Elipse':
+                x_ang = ((point_x - obj.x_axis) * np.cos(obj.angle)) - ((point_y - obj.y_axis) * np.sin(obj.angle))
+                y_ang = ((point_x - obj.x_axis) * np.sin(obj.angle)) - ((point_y - obj.y_axis) * np.cos(obj.angle))
+
+                ellipse_equation = (
+                    (pow(((point_x - obj.center[0]) * np.cos(obj.angle)) +
+                         ((point_y - obj.center[1]) * np.sin(obj.angle)), 2)
+
+                     / pow((max((obj.x_axis), (obj.y_axis))), 2))
+
+                    +
+
+                    (pow(((point_x - obj.center[0]) * np.sin(obj.angle)) -
+                         ((point_y - obj.center[1]) * np.cos(obj.angle)), 2)
+
+                     / pow((min((obj.x_axis), (obj.y_axis))), 2))
+                )
+                print(f'{ellipse_equation}\n')
+
+                if ellipse_equation <= 1:
+                    if obj.color == (255, 0, 0):
+                        obj.color = (0, 255, 0) # verde = selecionado
+                        self.selected_contours.append(obj)
+
+                    elif obj.color == (0, 255, 0): # vermelho = deselecionado
+                        obj.color = (255, 0, 0)
+                        self.selected_contours.remove(obj)
+
+                    self.create_ellipse(obj)
+
             if obj.__class__.__name__ == 'Circle':
 
                 dist_to_center = np.sqrt( pow((point_x - obj.center[0]), 2) +
@@ -309,11 +384,9 @@ class ImageViewerApp:
                     if obj.color == (255, 0, 0):
                         obj.color = (0, 255, 0) # verde = selecionado
                         self.selected_contours.append(obj)
-                        #print(self.selected_contours)
                     elif obj.color == (0, 255, 0): # vermelho = deselecionado
                         obj.color = (255, 0, 0)
                         self.selected_contours.remove(obj)
-                        #print(self.selected_contours)
 
                     self.create_contour_lines(obj,
                                               self.image_manipulator.zoomed_image,
@@ -323,27 +396,64 @@ class ImageViewerApp:
                                               self.image_manipulator.image,
                                               obj.translated_points)
 
+    def create_ellipse(self, obj):
+        axes_lenght = ((int(obj.x_axis / 2)), obj.y_axis)
+
+        translated_axes_lenght = ((int(obj.translated_x_axis / 2)),
+                                  int(
+                                          (obj.y_axis / self.image_manipulator.rectangle_ROI_zoom) *
+                                  self.image_manipulator.image_original_width / (self.config["image_viewer"]["width"])
+                                  ))
+
+        # zoomed image
+        cv2.ellipse(self.image_manipulator.zoomed_image, obj.center, axes_lenght,
+                    obj.angle, 0, 360,  obj.color, obj.thickness)
+
+        # manipulator image
+        cv2.ellipse(self.image_manipulator.image, obj.translated_center, translated_axes_lenght,
+                    obj.translated_angle, 0, 360, obj.color, obj.thickness)
+
+    def y_ellipse_axis_callback(self, event):
+        if self.elipse_mode and self.current_elipse.i == 2:
+            if os.name == "nt":
+                if event.delta > 0:
+                    self.current_elipse.define_y_axis(1)
+                elif event.delta < 0:
+                    if self.current_elipse.y_axis > 0:
+                        self.current_elipse.define_y_axis(-1)
+            if os.name == "posix":
+                if event.num == 4:
+                    self.current_elipse.define_y_axis(1)
+                elif event.num == 5:
+                    if self.current_elipse.y_axis >0:
+                        self.current_elipse.define_y_axis(-1)
+
     def trigger(self, event):
         if event.char == 'c':
             self.contour_mode = not self.contour_mode
             self.circle_mode = False
             self.select_mode = False
+            self.elipse_mode = False
             if self.contour_mode:
                 print('Contour mode on')
+                self.id = 0
             else:
                 print('Contour mode off')
         elif event.char == 'b':
             self.circle_mode = not self.circle_mode
             self.contour_mode = False
             self.select_mode = False
+            self.elipse_mode = False
             if self.circle_mode:
                 print('Circle mode on')
+                self.id = 0
             else:
                 print('Circle mode off')
         elif event.char == 'v':
             self.select_mode = not self.select_mode
             self.contour_mode = False
             self.circle_mode = False
+            self.elipse_mode = False
             if self.select_mode:
                 print('Select mode on')
             else:
@@ -356,6 +466,16 @@ class ImageViewerApp:
         elif event.keysym == 's' and self.segmentation_id == 0:
             self.auto_segmentation()
             self.segmentation_id += 1
+        elif event.keysym == 'e':
+            self.elipse_mode = not self.elipse_mode
+            if self.elipse_mode:
+                print('Elipse mode on')
+                self.id = 0
+            else:
+                print('Elipse mode off')
+            self.contour_mode = False
+            self.circle_mode = False
+            self.select_mode = False
 
     def auto_segmentation(self):
         print('started Auto Segmentation')
@@ -369,8 +489,23 @@ class ImageViewerApp:
                     contour.add_contour_points(None, translated_point)
 
             self.contours_list.append(contour)
+
+        for contour in self.segmentation.contours:
             self.create_contour_lines(contour, self.image_manipulator.zoomed_image, contour.points)
             self.create_contour_lines(contour, self.image_manipulator.image, contour.translated_points)
+
+    def mouse_ellipse_callback(self, event):
+        if self.elipse_mode:
+            (
+                self.navigation_window.point_x,
+                self.navigation_window.point_y,
+            ) = self.image_manipulator.translate_points(
+                self.annotation_window.point_x, self.annotation_window.point_y
+            )
+
+            self.current_elipse.add_elipse_points(self.annotation_window.point_x, self.annotation_window.point_y,
+                                                  self.navigation_window.point_x, self.navigation_window.point_y
+                                                  )
 
     def mouse_circle_callback(self, event):
         if self.circle_mode:
@@ -404,6 +539,8 @@ class ImageViewerApp:
             elif obj.__class__.__name__ == "Contour":
                 self.create_contour_lines(obj, self.image_manipulator.zoomed_image, obj.points)
                 self.create_contour_lines(obj, self.image_manipulator.image, obj.translated_points)
+            elif obj.__class__.__name__ == "Elipse":
+                self.create_ellipse(obj)
     def mouse_contour_callback(self, event):
         if self.contour_mode:
             (
@@ -423,11 +560,11 @@ class ImageViewerApp:
             cv2.line(image, points[count], points[count - 1],
                      obj.color, obj.thickness)
 
-    def delete_points(self):
-        if self.current_circle.i == 0:
+    def delete_points(self, i):
+        if i == 0:
             self.clean_image = self.image_manipulator.zoomed_image.copy()
             self.clean_manipulator_image = self.image_manipulator.image.copy()
-        elif self.current_circle.i == 2:
+        elif i == 2:
             self.image_manipulator.zoomed_image = self.clean_image
             self.image_manipulator.image = self.clean_manipulator_image
 

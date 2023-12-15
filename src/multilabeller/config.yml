@@ -30,3 +30,6 @@ left_mouse_click:
 image_viewer:
   width: 500
   height: 500
+
+tk_label:
+  text: "F9 -> Lock Image | C -> Contour Mode | B -> Circle Mode | E -> Elipse | V -> Select Mode \n Backspace -> Delete Contours | S -> Auto Segmentation"

@@ -16,9 +16,9 @@ class Circle:
                 self.i += 1
             else:
                 self.i = 2
-                self.create_circle(self.points, self.translated_points)
+                self.create_circle()
 
-    def create_circle(self, points, translated_points):
+    def create_circle(self):
 
             # circle on the annotation window
 
