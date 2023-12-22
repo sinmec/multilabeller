@@ -1,13 +1,12 @@
 import cv2
 import numpy as np
 
-
 class ImageManipulator:
     def __init__(self, image, config):
         self.config = config
         self.image_original = image.copy()
         self.zoomed_image_original = image.copy()
-
+        self.i = 0
         self.image = image.copy()
         self.zoomed_image = image.copy()
 
@@ -21,6 +20,7 @@ class ImageManipulator:
         self.rectangle_ROI_height = 0
         self.rectangle_ROI_zoom = 1.0
         self.rectangle_ROI_zoom_count = 30
+        self.j = 0
 
         self.get_image_dimensions()
         self.initialize_rectangle_ROI()
