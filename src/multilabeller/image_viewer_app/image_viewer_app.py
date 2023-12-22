@@ -239,7 +239,6 @@ class ImageViewerApp:
                                                       self.image_manipulator.image,
                                                       self.current_contour.translated_points)
 
-                            #print(self.contours_list)
                             self.id = self.id + 1
                             self.contour_confirm = not self.contour_confirm
 
@@ -286,11 +285,9 @@ class ImageViewerApp:
                     if obj.color == (255, 0, 0):
                         obj.color = (0, 255, 0) # verde = selecionado
                         self.selected_contours.append(obj)
-                        #print(self.selected_contours)
                     elif obj.color == (0, 255, 0): # vermelho = deselecionado
                         obj.color = (255, 0, 0)
                         self.selected_contours.remove(obj)
-                        #print(self.selected_contours)
 
                     self.update_circle(obj,
                                        self.image_manipulator.zoomed_image,
@@ -305,11 +302,9 @@ class ImageViewerApp:
                     if obj.color == (255, 0, 0):
                         obj.color = (0, 255, 0) # verde = selecionado
                         self.selected_contours.append(obj)
-                        #print(self.selected_contours)
                     elif obj.color == (0, 255, 0): # vermelho = deselecionado
                         obj.color = (255, 0, 0)
                         self.selected_contours.remove(obj)
-                        #print(self.selected_contours)
 
                     self.create_contour_lines(obj,
                                               self.image_manipulator.zoomed_image,
@@ -380,11 +375,9 @@ class ImageViewerApp:
             if obj.__class__.__name__ == "Circle":
                 self.update_circle(obj, self.image_manipulator.zoomed_image,
                                  self.image_manipulator.image)
-                print(f'printou o círculo {obj}')
             elif obj.__class__.__name__ == "Contour":
                 self.create_contour_lines(obj, self.image_manipulator.zoomed_image, obj.points)
                 self.create_contour_lines(obj, self.image_manipulator.image, obj.translated_points)
-                print(f'printou o contorno {obj}')
     def mouse_contour_callback(self, event):
         if self.contour_mode:
             (
@@ -439,7 +432,6 @@ class ImageViewerApp:
 
     def add_circle_to_list(self, obj):
         self.contours_list.append(obj)
-        #print(self.contours_list)
         self.id += 1
 
     def start(self):

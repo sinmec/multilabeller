@@ -37,7 +37,6 @@ for img in image_files:
     imgs_global.append(img)
 
 imgs_global.sort()
-print(imgs_global)
 
 # "Shuffling the images"
 N_imgs = len(imgs_global)
