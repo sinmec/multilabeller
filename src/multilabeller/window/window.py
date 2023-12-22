@@ -8,6 +8,7 @@ class Window(tk.Toplevel):
     def __init__(self, parent, title, config, shared_queue):
         super().__init__(parent)
 
+        self.original_zoomed_image = None
         self.title_string = title
         self.title(title)
         self.label = tk.Label(self, text=f"{title}")
@@ -91,6 +92,7 @@ class Window(tk.Toplevel):
 
     def lock_image(self, event):
         self.annotation_mode = not self.annotation_mode  # TODO: Think of a better name
+        self.original_zoomed_image = self.image_manipulator.zoomed_image.copy()
 
     def store_annotation_point(self, event):
         self.point_x = self.mouse_x
