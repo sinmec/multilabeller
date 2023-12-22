@@ -1,3 +1,5 @@
+import numpy as np
+
 class Circle:
     def __init__(self, id):
         self.i = 0
@@ -14,3 +16,23 @@ class Circle:
                 self.i += 1
             else:
                 self.i = 2
+                self.create_circle(self.points, self.translated_points)
+
+    def create_circle(self, points, translated_points):
+
+            # circle on the annotation window
+
+            self.center = [int((self.points[0][0] + self.points[1][0]) / 2),
+                           int((self.points[0][1] + self.points[1][1]) / 2)]
+
+            self.radius = int(np.sqrt(pow((self.points[1][0] - self.center[0]), 2) +
+                                      pow((self.points[1][1] - self.center[1]), 2)))
+
+            # circle on the navigation window
+
+            self.translated_center = [int((self.translated_points[0][0] + self.translated_points[1][0]) / 2),
+                                      int((self.translated_points[0][1] + self.translated_points[1][1]) / 2)]
+
+            self.translated_circle_radius = int(np.sqrt(pow((self.translated_points[1][0] - self.translated_center[0]), 2) +
+                                            pow((self.translated_points[1][1] - self.translated_center[1]), 2)))
+            # todo: improve this
