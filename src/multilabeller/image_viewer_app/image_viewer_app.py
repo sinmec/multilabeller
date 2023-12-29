@@ -54,6 +54,8 @@ class ImageViewerApp:
         self.selected_contours = []
         self.segmentation = None
         self.segmentation_id = 0
+        self.contours_to_recreate = []
+        self.duplication = False
 
     def read_config_file(self):
         try:
@@ -79,6 +81,7 @@ class ImageViewerApp:
             _width = w
             _height = h
             window.canvas = tk.Canvas(window, width=_width, height=_height)
+
             window.status_bar = tk.Label(window, text=self.config["tk_label"]["text"],
                                          bd=1, relief=tk.SUNKEN, anchor=tk.W)
             window.status_bar.pack(side=tk.BOTTOM, fill=tk.X)
@@ -197,12 +200,17 @@ class ImageViewerApp:
                     self.annotation_window.get_mouse_position,
                 )
 
+                if self.contours_list:
+                    self.recreate_contours_original_image()
+
                 if self.navigation_window.annotation_mode:
-                
+                    if self.contours_list:
+                        self.recreate_contours_original_image()
+
                     if self.circle_mode:  # CIRCLE
                         if self.id != self.circle_id:
                             self.circle_id = self.id
-                            self.current_circle = Circle(self.id)
+                            self.current_circle = Circle(self.id, self.image_manipulator.rectangle_ROI_zoom)
 
                         self.delete_points(self.current_circle.i)
 
@@ -215,7 +223,7 @@ class ImageViewerApp:
                     if self.contour_mode:  # CONTOUR
                         if self.id != self.contour_id:
                             self.contour_id = self.id
-                            self.current_contour = Contour(self.id)
+                            self.current_contour = Contour(self.id, self.image_manipulator.rectangle_ROI_zoom)
 
                         if self.current_contour.i == 0:
                             self.clean_image = self.image_manipulator.zoomed_image.copy()
@@ -234,14 +242,14 @@ class ImageViewerApp:
                                                       self.image_manipulator.image,
                                                       self.current_contour.translated_points)
 
-                            #print(self.contours_list)
+                            # print(self.contours_list)
                             self.id = self.id + 1
                             self.contour_confirm = not self.contour_confirm
 
                     if self.elipse_mode:  # ELLIPSE
                         if self.id != self.elipse_id:
                             self.id = self.elipse_id
-                            self.current_elipse = Elipse(self.elipse_id)
+                            self.current_elipse = Elipse(self.elipse_id, self.image_manipulator.rectangle_ROI_zoom)
 
                         if self.current_elipse.i == 2:
                             self.image_manipulator.zoomed_image = self.clean_image.copy()
@@ -268,6 +276,7 @@ class ImageViewerApp:
                     self.annotation_window.point_y = None
 
                 time.sleep(0.01)
+
         self.annotation_window.loop = run_annotation_window
 
     def ellipse_confirm_callback(self, event):
@@ -331,26 +340,26 @@ class ImageViewerApp:
                 y_ang = ((point_x - obj.x_axis) * np.sin(obj.angle)) - ((point_y - obj.y_axis) * np.cos(obj.angle))
 
                 ellipse_equation = (
-                    (pow(((point_x - obj.center[0]) * np.cos(obj.angle)) +
-                         ((point_y - obj.center[1]) * np.sin(obj.angle)), 2)
+                        (pow(((point_x - obj.center[0]) * np.cos(obj.angle)) +
+                             ((point_y - obj.center[1]) * np.sin(obj.angle)), 2)
 
-                     / pow((max((obj.x_axis), (obj.y_axis))), 2))
+                         / pow((max((obj.x_axis), (obj.y_axis))), 2))
 
-                    +
+                        +
 
-                    (pow(((point_x - obj.center[0]) * np.sin(obj.angle)) -
-                         ((point_y - obj.center[1]) * np.cos(obj.angle)), 2)
+                        (pow(((point_x - obj.center[0]) * np.sin(obj.angle)) -
+                             ((point_y - obj.center[1]) * np.cos(obj.angle)), 2)
 
-                     / pow((min((obj.x_axis), (obj.y_axis))), 2))
+                         / pow((min((obj.x_axis), (obj.y_axis))), 2))
                 )
                 print(f'{ellipse_equation}\n')
 
                 if ellipse_equation <= 1:
                     if obj.color == (255, 0, 0):
-                        obj.color = (0, 255, 0) # verde = selecionado
+                        obj.color = (0, 255, 0)  # verde = selecionado
                         self.selected_contours.append(obj)
 
-                    elif obj.color == (0, 255, 0): # vermelho = deselecionado
+                    elif obj.color == (0, 255, 0):  # vermelho = deselecionado
                         obj.color = (255, 0, 0)
                         self.selected_contours.remove(obj)
 
@@ -358,18 +367,18 @@ class ImageViewerApp:
 
             if obj.__class__.__name__ == 'Circle':
 
-                dist_to_center = np.sqrt( pow((point_x - obj.center[0]), 2) +
-                                          pow((point_y - obj.center[1]), 2) )
+                dist_to_center = np.sqrt(pow((point_x - obj.center[0]), 2) +
+                                         pow((point_y - obj.center[1]), 2))
 
                 if dist_to_center <= obj.radius:
                     if obj.color == (255, 0, 0):
-                        obj.color = (0, 255, 0) # verde = selecionado
+                        obj.color = (0, 255, 0)  # verde = selecionado
                         self.selected_contours.append(obj)
-                        #print(self.selected_contours)
-                    elif obj.color == (0, 255, 0): # vermelho = deselecionado
+                        # print(self.selected_contours)
+                    elif obj.color == (0, 255, 0):  # vermelho = deselecionado
                         obj.color = (255, 0, 0)
                         self.selected_contours.remove(obj)
-                        #print(self.selected_contours)
+                        # print(self.selected_contours)
 
                     self.update_circle(obj,
                                        self.image_manipulator.zoomed_image,
@@ -382,9 +391,9 @@ class ImageViewerApp:
 
                 if dist >= 0:
                     if obj.color == (255, 0, 0):
-                        obj.color = (0, 255, 0) # verde = selecionado
+                        obj.color = (0, 255, 0)  # verde = selecionado
                         self.selected_contours.append(obj)
-                    elif obj.color == (0, 255, 0): # vermelho = deselecionado
+                    elif obj.color == (0, 255, 0):  # vermelho = deselecionado
                         obj.color = (255, 0, 0)
                         self.selected_contours.remove(obj)
 
@@ -396,18 +405,30 @@ class ImageViewerApp:
                                               self.image_manipulator.image,
                                               obj.translated_points)
 
+    def create_ellipse_original_image(self, obj):
+        translated_axes_lenght = ((int(obj.translated_x_axis / 2)),
+                                  int(
+                                      (obj.y_axis / self.image_manipulator.rectangle_ROI_zoom) *
+                                      self.image_manipulator.image_original_width / (
+                                          self.config["image_viewer"]["width"])
+                                  ))
+
+        # manipulator image
+        cv2.ellipse(self.image_manipulator.image, obj.translated_center, translated_axes_lenght,
+                    obj.translated_angle, 0, 360, obj.color, obj.thickness)
     def create_ellipse(self, obj):
         axes_lenght = ((int(obj.x_axis / 2)), obj.y_axis)
 
         translated_axes_lenght = ((int(obj.translated_x_axis / 2)),
                                   int(
-                                          (obj.y_axis / self.image_manipulator.rectangle_ROI_zoom) *
-                                  self.image_manipulator.image_original_width / (self.config["image_viewer"]["width"])
+                                      (obj.y_axis / self.image_manipulator.rectangle_ROI_zoom) *
+                                      self.image_manipulator.image_original_width / (
+                                          self.config["image_viewer"]["width"])
                                   ))
 
         # zoomed image
         cv2.ellipse(self.image_manipulator.zoomed_image, obj.center, axes_lenght,
-                    obj.angle, 0, 360,  obj.color, obj.thickness)
+                    obj.angle, 0, 360, obj.color, obj.thickness)
 
         # manipulator image
         cv2.ellipse(self.image_manipulator.image, obj.translated_center, translated_axes_lenght,
@@ -425,7 +446,7 @@ class ImageViewerApp:
                 if event.num == 4:
                     self.current_elipse.define_y_axis(1)
                 elif event.num == 5:
-                    if self.current_elipse.y_axis >0:
+                    if self.current_elipse.y_axis > 0:
                         self.current_elipse.define_y_axis(-1)
 
     def trigger(self, event):
@@ -528,19 +549,31 @@ class ImageViewerApp:
 
         self.recreate_contours()
 
+    def recreate_contours_original_image(self):
+        # self.image_manipulator.image = self.image_original.copy()
+
+        for obj in self.contours_list:
+            if obj.__class__.__name__ == "Circle":
+                self.update_circle_original_image(obj, self.image_manipulator.image)
+            elif obj.__class__.__name__ == "Contour":
+                self.create_contour_lines(obj, self.image_manipulator.image, obj.translated_points)
+            elif obj.__class__.__name__ == "Elipse":
+                self.create_ellipse_original_image(obj)
+
     def recreate_contours(self):
         self.image_manipulator.zoomed_image = self.zoomed_image_original.copy()
         self.image_manipulator.image = self.image_original.copy()
-        
+
         for obj in self.contours_list:
             if obj.__class__.__name__ == "Circle":
                 self.update_circle(obj, self.image_manipulator.zoomed_image,
-                                 self.image_manipulator.image)
+                                   self.image_manipulator.image)
             elif obj.__class__.__name__ == "Contour":
                 self.create_contour_lines(obj, self.image_manipulator.zoomed_image, obj.points)
                 self.create_contour_lines(obj, self.image_manipulator.image, obj.translated_points)
             elif obj.__class__.__name__ == "Elipse":
                 self.create_ellipse(obj)
+
     def mouse_contour_callback(self, event):
         if self.contour_mode:
             (
@@ -593,9 +626,15 @@ class ImageViewerApp:
             obj.color, obj.thickness - 1
         )
 
+    def update_circle_original_image(self, obj, image):
+        cv2.circle(
+            image, obj.translated_center, obj.translated_circle_radius,
+            obj.color, obj.thickness - 1
+        )
+
     def add_circle_to_list(self, obj):
         self.contours_list.append(obj)
-        #print(self.contours_list)
+        # print(self.contours_list)
         self.id += 1
 
     def start(self):

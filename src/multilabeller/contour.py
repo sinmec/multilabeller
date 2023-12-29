@@ -1,10 +1,11 @@
 class Contour:
-    def __init__(self, id):
+    def __init__(self, id, ROI):
         self.i = 0
         self.points = []
         self.translated_points = []
         self.color = (255, 0, 0)
         self.thickness = 2
+        self.ROI = ROI
 
     def add_contour_points(self, point, translated_point):
         if point is not None:

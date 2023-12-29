@@ -1,12 +1,13 @@
 import numpy as np
 
 class Circle:
-    def __init__(self, id):
+    def __init__(self, id, ROI):
         self.i = 0
         self.points = [None, None]
         self.translated_points = [None, None]
         self.color = (255, 0, 0)
         self.thickness = 3
+        self.ROI = ROI
 
     def add_circle_points(self, point_x, point_y, translated_point_x, translated_point_y):
         if self.i <= 1:

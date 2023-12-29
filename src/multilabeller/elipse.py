@@ -1,7 +1,7 @@
 import numpy as np
 
 class Elipse:
-    def __init__(self, id):
+    def __init__(self, id, ROI):
         self.i = 0
         self.points = [None, None]
         self.translated_points = [None, None]
@@ -11,6 +11,7 @@ class Elipse:
         self.y_axis = 2
         self.center = 0
         self.x_axis = 0
+        self.ROI = ROI
 
     def add_elipse_points(self, point_x, point_y, translated_point_x, translated_point_y):
         if self.i <= 1:
