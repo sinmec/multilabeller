@@ -60,7 +60,6 @@ class ellipse_contour(drawed_contour):
             (self.x_c, self.y_c), (self.d_1, self.d_2), int(self.angle), 360, 1, 1
         )
         N_points = len(ellipse_poly)
-        print(N_points)
         cv2_contour = np.zeros((N_points, 1, 2), dtype=int)
         for i, (x, y) in enumerate(ellipse_poly):
             cv2_contour[i, 0, 0] = ellipse_poly[i][0]

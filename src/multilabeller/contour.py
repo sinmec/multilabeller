@@ -14,4 +14,5 @@ class Contour:
             self.translated_points.append(translated_point)
         #print(self.points)
         #self.translated_points[self.i] = (translated_point_x, translated_point_y)
+
         self.i += 1

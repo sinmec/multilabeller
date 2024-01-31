@@ -380,6 +380,7 @@ class ImageViewerApp:
                         self.selected_contours.remove(obj)
                         # print(self.selected_contours)
 
+
                     self.update_circle(obj,
                                        self.image_manipulator.zoomed_image,
                                        self.image_manipulator.image)
@@ -394,6 +395,7 @@ class ImageViewerApp:
                         obj.color = (0, 255, 0)  # verde = selecionado
                         self.selected_contours.append(obj)
                     elif obj.color == (0, 255, 0):  # vermelho = deselecionado
+
                         obj.color = (255, 0, 0)
                         self.selected_contours.remove(obj)
 
