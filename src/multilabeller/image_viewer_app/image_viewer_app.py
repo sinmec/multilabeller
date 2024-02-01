@@ -25,6 +25,7 @@ if os.name == "posix":
 
 class ImageViewerApp:
     def __init__(self, root):
+        self.k = 0
         self.ellipse_confirm = False
         self.elipse_id = -1
         self.image_original = None
@@ -202,6 +203,7 @@ class ImageViewerApp:
 
                 if self.contours_list:
                     self.recreate_contours_original_image()
+                    self.recreate_contours_zoomed_image()
 
                 if self.navigation_window.annotation_mode:
                     if self.contours_list:
@@ -210,7 +212,10 @@ class ImageViewerApp:
                     if self.circle_mode:  # CIRCLE
                         if self.id != self.circle_id:
                             self.circle_id = self.id
-                            self.current_circle = Circle(self.id, self.image_manipulator.rectangle_ROI_zoom)
+                            self.current_circle = Circle(self.id,
+                                                         (self.image_manipulator.rectangle_ROI_zoom,
+                                                          self.image_manipulator.zoomed_image_coordinates)
+                                                         )
 
                         self.delete_points(self.current_circle.i)
 
@@ -223,7 +228,10 @@ class ImageViewerApp:
                     if self.contour_mode:  # CONTOUR
                         if self.id != self.contour_id:
                             self.contour_id = self.id
-                            self.current_contour = Contour(self.id, self.image_manipulator.rectangle_ROI_zoom)
+                            self.current_contour = Contour(self.id,
+                                                           (self.image_manipulator.rectangle_ROI_zoom,
+                                                            self.image_manipulator.zoomed_image_coordinates)
+                                                           )
 
                         if self.current_contour.i == 0:
                             self.clean_image = self.image_manipulator.zoomed_image.copy()
@@ -249,7 +257,9 @@ class ImageViewerApp:
                     if self.elipse_mode:  # ELLIPSE
                         if self.id != self.elipse_id:
                             self.id = self.elipse_id
-                            self.current_elipse = Elipse(self.elipse_id, self.image_manipulator.rectangle_ROI_zoom)
+                            self.current_elipse = Elipse(self.elipse_id,
+                                                         (self.image_manipulator.rectangle_ROI_zoom,
+                                                          self.image_manipulator.zoomed_image_coordinates))
 
                         if self.current_elipse.i == 2:
                             self.image_manipulator.zoomed_image = self.clean_image.copy()
@@ -380,7 +390,6 @@ class ImageViewerApp:
                         self.selected_contours.remove(obj)
                         # print(self.selected_contours)
 
-
                     self.update_circle(obj,
                                        self.image_manipulator.zoomed_image,
                                        self.image_manipulator.image)
@@ -418,6 +427,7 @@ class ImageViewerApp:
         # manipulator image
         cv2.ellipse(self.image_manipulator.image, obj.translated_center, translated_axes_lenght,
                     obj.translated_angle, 0, 360, obj.color, obj.thickness)
+
     def create_ellipse(self, obj):
         axes_lenght = ((int(obj.x_axis / 2)), obj.y_axis)
 
@@ -544,12 +554,68 @@ class ImageViewerApp:
                                                   self.navigation_window.point_x, self.navigation_window.point_y
                                                   )
 
+    def translate_point_different_ROIs(self, point, old_image_settings, new_image_settings):
+
+        # image_settings = [ROI, image_coordinates]
+
+        # this function exists to solve the problem of the display of the contours on the zoomed image
+        # after unlock the image
+        # TODO: I THINK THE ONLY PROBLEM NOW IS IN THIS FUNCTION
+
+        old_ROI = old_image_settings[0]
+        new_ROI = new_image_settings[0]
+        delta_ROI = new_ROI - old_ROI
+
+        old_x1_rec, old_x2_rec, old_y1_rec, old_y2_rec = old_image_settings[1]
+        new_x1_rec, new_x2_rec, new_y1_rec, new_y2_rec = new_image_settings[1]
+
+        delta_x_rec = (new_x2_rec - new_x1_rec) - (old_x2_rec - old_x1_rec)
+        delta_y_rec = (new_y2_rec - new_y1_rec) - (old_y2_rec - old_y1_rec)
+
+        point_x1 = point[0]
+        point_y1 = point[1]
+
+        new_point = (delta_ROI * (point_x1 - delta_x_rec), (delta_ROI * (point_y1 - delta_y_rec)))
+
+        return new_point
+
     def delete_selected_contours(self):
         for selected in self.selected_contours:
             if selected in self.contours_list:
                 self.contours_list.remove(selected)
 
         self.recreate_contours()
+
+    def recreate_contours_zoomed_image(self):
+        for obj in self.contours_list:
+            if obj.__class__.__name__ == "Circle":
+                # todo: pegar pontos de quando o objeto foi criado e traduzir para a nova ROI da zoomed image
+                point1 = obj.points[0]
+                point2 = obj.points[1]
+
+                new_point_1 = self.translate_point_different_ROIs(point1, (obj.ROI[0], obj.ROI[1]),
+                                                                     (self.image_manipulator.rectangle_ROI_zoom,
+                                                                      self.image_manipulator.zoomed_image_coordinates))
+
+                new_point_2 = self.translate_point_different_ROIs(point2, (obj.ROI[0], obj.ROI[1]),
+                                                                     (self.image_manipulator.rectangle_ROI_zoom,
+                                                                      self.image_manipulator.zoomed_image_coordinates))
+
+
+                circulo = Circle(self.k, 0)
+
+                self.k += 1
+
+                circulo.update_circle_points_zoomed_image(new_point_1, new_point_2)
+
+                self.update_circle_zoomed_image(circulo, self.image_manipulator.zoomed_image)
+
+            elif obj.__class__.__name__ == "Contour":
+                # todo: pegar pontos de quando o objeto foi criado e traduzir para a nova ROI da zoomed image
+                a = 2
+            elif obj.__class__.__name__ == "Elipse":
+                # todo: pegar pontos de quando o objeto foi criado e traduzir para a nova ROI da zoomed image
+                a = 2
 
     def recreate_contours_original_image(self):
         # self.image_manipulator.image = self.image_original.copy()
@@ -626,6 +692,11 @@ class ImageViewerApp:
         cv2.circle(
             image_manipulator, obj.translated_center, obj.translated_circle_radius,
             obj.color, obj.thickness - 1
+        )
+
+    def update_circle_zoomed_image(self, obj, image_annotation):
+        cv2.circle(
+            image_annotation, obj.center, obj.radius, obj.color, obj.thickness
         )
 
     def update_circle_original_image(self, obj, image):

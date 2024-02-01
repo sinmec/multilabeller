@@ -19,6 +19,19 @@ class Circle:
                 self.i = 2
                 self.create_circle()
 
+    def update_circle_points_zoomed_image(self, point1, point2):
+        self.points = [point1, point2]
+        self.display_updated_circle_zoomed_image()
+
+    def display_updated_circle_zoomed_image(self):
+        # circle on the annotation window
+
+        self.center = [int((self.points[0][0] + self.points[1][0]) / 2),
+                       int((self.points[0][1] + self.points[1][1]) / 2)]
+
+        self.radius = int(np.sqrt(pow((self.points[1][0] - self.center[0]), 2) +
+                                  pow((self.points[1][1] - self.center[1]), 2)))
+
     def create_circle(self):
 
             # circle on the annotation window
