@@ -19,6 +19,13 @@ class Circle:
                 self.i = 2
                 self.create_circle()
 
+    def add_fixed_points(self, point_x, point_y):
+        if self.i < 2:
+            self.points[self.i] = (point_x, point_y)
+            self.i += 1
+        if self.i >= 2:
+            self.display_updated_circle_zoomed_image()
+
     def display_updated_circle_zoomed_image(self):
         # circle on the annotation window
 

@@ -15,7 +15,7 @@ from src.multilabeller.circle import Circle
 from src.multilabeller.contour import Contour
 from src.multilabeller.selectclass import SelectClass
 from src.multilabeller.SAM.sam import SegmentAnything
-from src.multilabeller.elipse import Elipse
+from src.multilabeller.ellipse import Ellipse
 
 if os.name == "nt":
     os_option = "windows"
@@ -203,6 +203,10 @@ class ImageViewerApp:
 
                 if self.contours_list:
                     self.recreate_contours_original_image()
+                    # todo: aqui vai ter uma função que faz a mesma coisa que a função de cima porém para zoomed_image
+                    # todo: função que verifica se tem contornos dentro do quadrado verde
+                    # todo: ver função do select
+                    self.recreate_contours_zoomed_image()
 
                 if self.navigation_window.annotation_mode:
                     if self.circle_mode:  # CIRCLE
@@ -252,8 +256,8 @@ class ImageViewerApp:
                     if self.elipse_mode:  # ELLIPSE
                         if self.id != self.elipse_id:
                             self.id = self.elipse_id
-                            self.current_elipse = Elipse(self.elipse_id,
-                                                         (self.image_manipulator.rectangle_ROI_zoom,
+                            self.current_elipse = Ellipse(self.elipse_id,
+                                                          (self.image_manipulator.rectangle_ROI_zoom,
                                                           self.image_manipulator.zoomed_image_coordinates))
 
                         if self.current_elipse.i == 2:
@@ -283,6 +287,36 @@ class ImageViewerApp:
                 time.sleep(0.01)
 
         self.annotation_window.loop = run_annotation_window
+
+    def recreate_contours_zoomed_image(self):
+        redraw_list = []
+        for obj in self.contours_list:
+            if obj.__class__.__name__ == "Circle":
+                # pegar pontos da imagem original e traduzir para a zoomed_image
+                newcircle = Circle(0, 0)
+                for point in obj.translated_points:
+                    point_translated = self.image_manipulator.retranslate_points(point[0], point[1])
+                    newcircle.add_fixed_points(point_translated[0], point_translated[1])
+
+                cv2.circle(
+                    self.image_manipulator.zoomed_image, newcircle.center, newcircle.radius, newcircle.color, newcircle.thickness
+                )
+
+            if obj.__class__.__name__ == "Contour":
+                # pegar pontos da imagem original e traduzir para a zoomed_image
+                newcontour = Contour(0, 0)
+                for point in obj.translated_points:
+                    point_translated = self.image_manipulator.retranslate_points(point[0], point[1])
+                    newcontour.add_contour_points(point_translated, None)
+
+                for count, point in enumerate(newcontour.points):
+                    print(f'{newcontour.points[count]}, {newcontour.points[count - 1]}')
+                    cv2.line(self.image_manipulator.zoomed_image, newcontour.points[count], newcontour.points[count - 1],
+                             newcontour.color, newcontour.thickness)
+
+            if obj.__class__.__name__ == "Ellipse":
+                # pegar pontos da imagem original e traduzir para a zoomed_image
+                a = 2
 
     def ellipse_confirm_callback(self, event):
         self.ellipse_confirm = True
@@ -531,9 +565,9 @@ class ImageViewerApp:
                 self.annotation_window.point_x, self.annotation_window.point_y
             )
 
-            self.current_elipse.add_elipse_points(self.annotation_window.point_x, self.annotation_window.point_y,
-                                                  self.navigation_window.point_x, self.navigation_window.point_y
-                                                  )
+            self.current_elipse.add_ellipse_points(self.annotation_window.point_x, self.annotation_window.point_y,
+                                                   self.navigation_window.point_x, self.navigation_window.point_y
+                                                   )
 
     def mouse_circle_callback(self, event):
         if self.circle_mode:

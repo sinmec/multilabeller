@@ -123,7 +123,7 @@ class ImageManipulator:
             image, (point_x, point_y), circle_radius, circle_color, circle_thickness
         )
 
-    def translate_points(self, point_x, point_y):
+    def translate_points(self, point_x, point_y):  # zoomed to original
         # TODO: This is dumb! Think on a smart solution!
         if (point_x is None) or (point_y is None):
             return None, None
@@ -136,3 +136,15 @@ class ImageManipulator:
             * (self.image_original_width / (self.config["image_viewer"]["height"]))
         )
         return point_x_translated, point_y_translated
+
+    def retranslate_points(self, point_x_translated, point_y_translated):  # original to zoomed
+        if (point_x_translated is None) or (point_y_translated is None):
+            return None, None
+        point_x = int(((point_x_translated - self.x1) * self.rectangle_ROI_zoom) *
+                   (self.config["image_viewer"]["width"] / self.image_original_width))
+        point_y = int(((point_y_translated - self.y1) * self.rectangle_ROI_zoom) *
+                   (self.config["image_viewer"]["width"] / self.image_original_width))
+        # point_x = (point_x_translated + self.x1)
+        # point_y = (point_y_translated + self.y1)
+
+        return point_x, point_y
