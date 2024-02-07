@@ -19,10 +19,6 @@ class Circle:
                 self.i = 2
                 self.create_circle()
 
-    def update_circle_points_zoomed_image(self, point1, point2):
-        self.points = [point1, point2]
-        self.display_updated_circle_zoomed_image()
-
     def display_updated_circle_zoomed_image(self):
         # circle on the annotation window
 
