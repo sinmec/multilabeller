@@ -13,11 +13,23 @@ class Ellipse:
         self.x_axis = 0
         self.ROI = ROI
 
+
     def add_ellipse_points(self, point_x, point_y, translated_point_x, translated_point_y):
         if self.i <= 1:
             self.points[self.i] = [point_x, point_y]
             print(self.points)
             self.translated_points[self.i] = [translated_point_x, translated_point_y]
+
+    def update_ellipse_zoomed_image(self):
+        x1 = self.points[0][0]
+        x2 = self.points[1][0]
+        y1 = self.points[0][1]
+        y2 = self.points[1][1]
+
+        self.center = (int((x1+x2)/2), int((y1+y2)/2))
+        self.x_axis = int(np.sqrt(pow(x2-x1, 2) + pow(y2-y1, 2)))
+
+        self.angle = int(np.degrees(np.arctan((y2 - y1) / (x2 - x1))))
 
     def create_initial_ellipse(self):
         # zoomed image

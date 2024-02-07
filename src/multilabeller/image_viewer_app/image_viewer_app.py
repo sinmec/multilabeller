@@ -293,31 +293,43 @@ class ImageViewerApp:
         for obj in self.contours_list:
             if obj.__class__.__name__ == "Circle":
                 # pegar pontos da imagem original e traduzir para a zoomed_image
-                newcircle = Circle(0, 0)
-                for point in obj.translated_points:
+                objectpoints = obj.translated_points
+
+                obj.points = []
+                for point in objectpoints:
                     point_translated = self.image_manipulator.retranslate_points(point[0], point[1])
-                    newcircle.add_fixed_points(point_translated[0], point_translated[1])
+                    obj.points.append([point_translated[0], point_translated[1]])
+
+                obj.display_updated_circle_zoomed_image()
 
                 cv2.circle(
-                    self.image_manipulator.zoomed_image, newcircle.center, newcircle.radius, newcircle.color, newcircle.thickness
+                    self.image_manipulator.zoomed_image, obj.center, obj.radius, obj.color, obj.thickness
                 )
 
             if obj.__class__.__name__ == "Contour":
                 # pegar pontos da imagem original e traduzir para a zoomed_image
-                newcontour = Contour(0, 0)
+                obj.points = []
                 for point in obj.translated_points:
                     point_translated = self.image_manipulator.retranslate_points(point[0], point[1])
-                    newcontour.add_contour_points(point_translated, None)
+                    obj.add_contour_points(point_translated, None)
 
-                for count, point in enumerate(newcontour.points):
-                    print(f'{newcontour.points[count]}, {newcontour.points[count - 1]}')
-                    cv2.line(self.image_manipulator.zoomed_image, newcontour.points[count], newcontour.points[count - 1],
-                             newcontour.color, newcontour.thickness)
+                for count, point in enumerate(obj.points):
+                    cv2.line(self.image_manipulator.zoomed_image, obj.points[count], obj.points[count - 1],
+                             obj.color, obj.thickness)
 
             if obj.__class__.__name__ == "Ellipse":
-                # pegar pontos da imagem original e traduzir para a zoomed_image
-                a = 2
+                # todo: need to fix ellipse axes lenght when zooming
+                obj.points = []
+                for point in obj.translated_points:
+                    point_translated = self.image_manipulator.retranslate_points(point[0], point[1])
+                    obj.points.append(point_translated)
 
+                obj.update_ellipse_zoomed_image()
+
+                axes_lenght = ((int(obj.x_axis / 2)), obj.y_axis)
+
+                cv2.ellipse(self.image_manipulator.zoomed_image, obj.center, axes_lenght,
+                            obj.translated_angle, 0, 360, obj.color, obj.thickness)
     def ellipse_confirm_callback(self, event):
         self.ellipse_confirm = True
 
@@ -374,7 +386,7 @@ class ImageViewerApp:
 
         for obj in self.contours_list:
 
-            if obj.__class__.__name__ == 'Elipse':
+            if obj.__class__.__name__ == 'Ellipse':
                 x_ang = ((point_x - obj.x_axis) * np.cos(obj.angle)) - ((point_y - obj.y_axis) * np.sin(obj.angle))
                 y_ang = ((point_x - obj.x_axis) * np.sin(obj.angle)) - ((point_y - obj.y_axis) * np.cos(obj.angle))
 
@@ -545,7 +557,6 @@ class ImageViewerApp:
 
         for contour in self.segmentation.contours:
             for point in contour.points:
-                print(point)
                 if point:
                     translated_point = self.image_manipulator.translate_points(point[0], point[1])
                     contour.add_contour_points(None, translated_point)

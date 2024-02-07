@@ -12,10 +12,10 @@ class SegmentAnything:
         #self.image = cv2.cvtColor(image_input, cv2.COLOR_BGR2RGB)
         self.image = image_input
 
-        sam_checkpoint = "C:/Users/higor/Documents/projetos/multilabeller/src/multilabeller/SAM/sam_vit_b_01ec64.pth"
+        sam_checkpoint = "/home/sinmec/multilabeller/src/multilabeller/SAM/sam_vit_b_01ec64.pth"
         model_type = "vit_b"
 
-        device = "cuda"
+        device = "cpu"
 
         # configura o modelo do Sam
         sam = sam_model_registry[model_type](checkpoint=sam_checkpoint)
@@ -46,7 +46,7 @@ class SegmentAnything:
             uint8_mask = 255 * np.uint8(boolean_mask)
             mask_contours, _ = cv2.findContours(uint8_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
             self.contour_id += 1
-            self.contour = Contour(self.contour_id)
+            self.contour = Contour(self.contour_id,0)
 
             coordinates_array = mask_contours[0]
             coordinates_list = coordinates_array.reshape(-1, 2).tolist()
