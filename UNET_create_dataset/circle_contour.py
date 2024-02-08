@@ -27,12 +27,9 @@ class circle_contour(drawed_contour):
             (self.c_x, self.c_y), (self.radius, self.radius), 0, 360, 1, 1
         )
         N_points = len(ellipse_poly)
-        print(N_points)
         cv2_contour = np.zeros((N_points, 1, 2), dtype=int)
         for i, (x, y) in enumerate(ellipse_poly):
             cv2_contour[i, 0, 0] = ellipse_poly[i][0]
             cv2_contour[i, 0, 1] = ellipse_poly[i][1]
-        # print(cv2_contour)
-        # exit()
         self.cv2_contour = cv2_contour
         return cv2_contour
