@@ -44,16 +44,14 @@ class ImageViewerApp:
         self.circle_id = -1
         self.id = 0
         self.read_config_file()
-        self.check_SAM_configuration()
+        self.initialize_SAM()
         self.initialize_main_window()
         self.initialize_queue()
         self.current_contour = None
         self.selector = Selector()
         self.selected_contours = []
-        self.segmentation = None
-        self.segmentation_id = 0
 
-    def check_SAM_configuration(self):
+    def initialize_SAM(self):
         if self.config["SAM"]["device"] == "gpu":
             cuda_available = torch.cuda.is_available()
             assert (
@@ -75,10 +73,14 @@ class ImageViewerApp:
         )
         assert os.path.isfile(SAM_model_file), message
 
-        self.SAM_config = {
+        SAM_config = {
             "device": self.config["SAM"]["device"],
             "model": {"name": self.config["SAM"]["model"], "file": SAM_model_file},
         }
+
+        self.SAM = SegmentAnything(SAM_config)
+
+        print("SAM initialized successfully!")
 
     def read_config_file(self):
         try:
@@ -418,19 +420,15 @@ class ImageViewerApp:
             print("Contour saved")
         elif event.keysym == "BackSpace":
             self.delete_selected_contours()
-        elif event.keysym == "s" and self.segmentation_id == 0:
+        elif event.keysym == "s":
             self.auto_segmentation()
-            self.segmentation_id += 1
 
     def auto_segmentation(self):
-        print("Started Auto Segmentation")
-        self.segmentation = SegmentAnything(
-            self.zoomed_image_original.copy(), self.SAM_config
-        )
+        print("Applying SAM...")
+        self.SAM.apply(self.zoomed_image_original.copy())
 
-        for contour in self.segmentation.contours:
+        for contour in self.SAM.contours:
             for point in contour.points:
-                print(point)
                 if point:
                     translated_point = self.image_manipulator.translate_points(
                         point[0], point[1]
@@ -444,6 +442,8 @@ class ImageViewerApp:
             self.create_contour_lines(
                 contour, self.image_manipulator.image, contour.translated_points
             )
+
+        print(f"SAM found {len(self.SAM.contours)} contours!")
 
     def mouse_circle_callback(self, event):
         if self.circle_mode:
