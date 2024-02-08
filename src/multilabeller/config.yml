@@ -26,6 +26,10 @@ left_mouse_click:
   windows: "<Double-Button-1>"
   linux: "<Double-Button-1>"
 
+SAM:
+  device: "cuda"
+  model: "vit_b" # vit_l; vit_b or vit_h
+
 #TODO: It should work with any image size, but its not working. We'll check this out in the future
 image_viewer:
   width: 500
