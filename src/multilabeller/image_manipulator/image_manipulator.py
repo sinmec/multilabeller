@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 
+
 class ImageManipulator:
     def __init__(self, image, config):
         self.config = config
