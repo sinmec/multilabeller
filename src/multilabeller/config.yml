@@ -30,6 +30,15 @@ SAM:
   device: "cuda"
   model: "vit_b" # vit_l; vit_b or vit_h
 
+shortcuts:
+  circle_mode: "b"
+  contour_mode: "c"
+  select_mode: "v"
+  save_contour: " "
+  delete_contour: "BackSpace"
+  apply_SAM: "s"
+  annotation_mode: "<F9>" #TODO:Improve exiting mode when in annotation mode!
+
 #TODO: It should work with any image size, but its not working. We'll check this out in the future
 image_viewer:
   width: 500
