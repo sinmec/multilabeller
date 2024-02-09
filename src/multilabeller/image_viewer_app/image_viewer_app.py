@@ -101,6 +101,17 @@ class ImageViewerApp:
 
         self.image_manipulator = ImageManipulator(image, self.config)
 
+    def create_annotation_window_text(self):
+        text = ""
+        text += f"{self.config['shortcuts']['annotation_mode']} -> Lock Image | "
+        text += f"{self.config['shortcuts']['contour_mode']} ->  Contour Mode | "
+        text += f"{self.config['shortcuts']['circle_mode']} ->  Circle Mode | "
+        text += f"{self.config['shortcuts']['select_mode']} ->  Select Mode | "
+        text += f"{self.config['shortcuts']['delete_contour']} ->  Delete Contours | "
+        text += f"{self.config['shortcuts']['apply_SAM']} ->  Auto Segmentation"
+
+        return text
+
     def configure_window(self, window, w, h):
         if w or h:
             _width = w
@@ -108,9 +119,7 @@ class ImageViewerApp:
             window.canvas = tk.Canvas(window, width=_width, height=_height)
             window.status_bar = tk.Label(
                 window,
-                text="F9 -> Lock Image | C -> Contour Mode | B -> Circle Mode |"
-                " V -> Select Mode | Backspace -> Delete Contours |"
-                " S -> Auto Segmentation",
+                text=self.create_annotation_window_text(),
                 bd=1,
                 relief=tk.SUNKEN,
                 anchor=tk.W,
@@ -200,9 +209,15 @@ class ImageViewerApp:
                     )
 
                 self.navigation_window.bind(
-                    "<F9>", self.navigation_window.lock_image, add="+"
+                    self.config["shortcuts"]["annotation_mode"],
+                    self.navigation_window.lock_image,
+                    add="+",
                 )
-                self.navigation_window.bind("<F9>", self.save_image, add="+")
+                self.navigation_window.bind(
+                    self.config["shortcuts"]["annotation_mode"],
+                    self.save_image,
+                    add="+",
+                )
 
                 if not self.navigation_window.annotation_mode:
                     self.navigation_window.draw_ROI()
@@ -302,18 +317,11 @@ class ImageViewerApp:
                                 self.current_contour.translated_points,
                             )
 
-                            # print(self.contours_list)
                             self.id = self.id + 1
                             self.contour_confirm = not self.contour_confirm
 
                     if self.select_mode:
                         if self.selector.i != 0:  # TODO: GAMBIARRA
-                            # self.image_manipulator.draw_annotation_point(
-                            #     self.image_manipulator.zoomed_image,
-                            #     self.annotation_window.point_x,
-                            #     self.annotation_window.point_y,
-                            # )
-
                             if (
                                 self.annotation_window.point_x
                                 and self.annotation_window.point_y
@@ -355,11 +363,9 @@ class ImageViewerApp:
                     if obj.color == (255, 0, 0):
                         obj.color = (0, 255, 0)  # verde = selecionado
                         self.selected_contours.append(obj)
-                        # print(self.selected_contours)
                     elif obj.color == (0, 255, 0):  # vermelho = deselecionado
                         obj.color = (255, 0, 0)
                         self.selected_contours.remove(obj)
-                        # print(self.selected_contours)
 
                     self.update_circle(
                         obj,
@@ -376,11 +382,9 @@ class ImageViewerApp:
                     if obj.color == (255, 0, 0):
                         obj.color = (0, 255, 0)  # verde = selecionado
                         self.selected_contours.append(obj)
-                        # print(self.selected_contours)
                     elif obj.color == (0, 255, 0):  # vermelho = deselecionado
                         obj.color = (255, 0, 0)
                         self.selected_contours.remove(obj)
-                        # print(self.selected_contours)
 
                     self.create_contour_lines(
                         obj, self.image_manipulator.zoomed_image, obj.points
@@ -391,7 +395,7 @@ class ImageViewerApp:
                     )
 
     def trigger(self, event):
-        if event.char == "c":
+        if event.char == self.config["shortcuts"]["contour_mode"]:
             self.contour_mode = not self.contour_mode
             self.circle_mode = False
             self.select_mode = False
@@ -399,7 +403,7 @@ class ImageViewerApp:
                 print("Contour mode on")
             else:
                 print("Contour mode off")
-        elif event.char == "b":
+        elif event.char == self.config["shortcuts"]["circle_mode"]:
             self.circle_mode = not self.circle_mode
             self.contour_mode = False
             self.select_mode = False
@@ -407,7 +411,7 @@ class ImageViewerApp:
                 print("Circle mode on")
             else:
                 print("Circle mode off")
-        elif event.char == "v":
+        elif event.char == self.config["shortcuts"]["select_mode"]:
             self.select_mode = not self.select_mode
             self.contour_mode = False
             self.circle_mode = False
@@ -415,13 +419,15 @@ class ImageViewerApp:
                 print("Select mode on")
             else:
                 print("Select mode off")
-        elif event.char == " ":  # spacebar
+        elif event.char == self.config["shortcuts"]["save_contour"]:
             self.contour_confirm = not self.contour_confirm
             print("Contour saved")
-        elif event.keysym == "BackSpace":
+        elif event.keysym == self.config["shortcuts"]["delete_contour"]:
             self.delete_selected_contours()
-        elif event.keysym == "s":
+        elif event.keysym == self.config["shortcuts"]["apply_SAM"]:
             self.auto_segmentation()
+        else:
+            print("Please chose a valid option!")
 
     def auto_segmentation(self):
         print("Applying SAM...")
