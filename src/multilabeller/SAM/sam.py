@@ -4,7 +4,7 @@ from segment_anything import SamAutomaticMaskGenerator, sam_model_registry
 import numpy as np
 import torch
 import os
-from src.multilabeller.contour import Contour
+from src.multilabeller.drawed_contour import DrawedContour
 
 
 class SegmentAnything:
@@ -41,7 +41,7 @@ class SegmentAnything:
                 uint8_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
             )
             self.contour_id += 1
-            contour = Contour(self.contour_id)
+            contour = DrawedContour(self.contour_id)
 
             coordinates_array = mask_contours[0]
             coordinates_list = coordinates_array.reshape(-1, 2).tolist()
