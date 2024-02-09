@@ -1,6 +1,9 @@
 import cv2
 import numpy as np
 
+RED = (255, 0, 0)
+GREEN = (0, 0, 255)
+
 
 class Circle:
     def __init__(self):
@@ -9,13 +12,27 @@ class Circle:
         self.translated_points = [None, None]
 
         self.valid = True
-        self.color = (255, 0, 0)
+        self.color = RED
         self.thickness = 3
 
         self.in_progress = True
         self.finished = False
 
         self.contour = None
+
+        self.selected = False
+
+    def toggle_selection(self):
+        if self.selected:
+            self.selected = False
+        else:
+            self.selected = True
+
+    def toggle_color(self):
+        if self.color == RED:
+            self.color = GREEN
+        elif self.color == GREEN:
+            self.color = RED
 
     def to_cv2_contour(self):
         ellipse_poly = cv2.ellipse2Poly(
