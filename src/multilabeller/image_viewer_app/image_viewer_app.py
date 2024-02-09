@@ -51,6 +51,10 @@ class ImageViewerApp:
         self.selector = Selector()
         self.selected_contours = []
 
+        self.annotation_objects = []
+
+        self.current_circle = None
+
     def initialize_SAM(self):
         if self.config["SAM"]["device"] == "gpu":
             cuda_available = torch.cuda.is_available()
@@ -155,6 +159,17 @@ class ImageViewerApp:
 
         self.setup_run()
 
+    def draw_annotation_objects(self):
+        for annotation_object in self.annotation_objects:
+            cv2.drawContours(
+                self.zoomed_image_original,
+                [annotation_object.contour],
+                -1,
+                annotation_object.color,
+                annotation_object.thickness,
+            )
+            self.image_manipulator.zoomed_image = self.zoomed_image_original.copy()
+
     def setup_run(self):
         def run_navigation_window():
             self.navigation_window.set_image_manipulator(self.image_manipulator)
@@ -240,98 +255,154 @@ class ImageViewerApp:
 
                 if self.navigation_window.annotation_mode:
                     if self.circle_mode:
-                        if self.id != self.circle_id:
-                            self.circle_id = self.id
-                            self.current_circle = Circle(self.id)
+                        if self.current_circle is None:
+                            self.current_circle = Circle()
+                        elif self.current_circle.in_progress:
+                            for point in self.current_circle.points:
+                                if point is not None:
+                                    circle_radius = 5
+                                    circle_color = (0, 255, 0)
+                                    circle_thickness = -1
 
-                        if self.current_circle.i != 0:
-                            self.image_manipulator.draw_annotation_point(
-                                self.image_manipulator.zoomed_image,
-                                self.annotation_window.point_x,
-                                self.annotation_window.point_y,
-                            )
+                                    point_x, point_y = point
 
-                        (
-                            self.navigation_window.point_x,
-                            self.navigation_window.point_y,
-                        ) = self.image_manipulator.translate_points(
-                            self.annotation_window.point_x,
-                            self.annotation_window.point_y,
-                        )
+                                    cv2.circle(
+                                        self.image_manipulator.zoomed_image,
+                                        (point_x, point_y),
+                                        circle_radius,
+                                        circle_color,
+                                        circle_thickness,
+                                    )
+                        elif self.current_circle.finished:
+                            self.annotation_objects.append(self.current_circle)
+                            self.draw_annotation_objects()
+                            self.current_circle = None
 
-                        self.delete_points()
+                            # if not self.current_circle.in_progress:
+                        #     self.current_circle = Circle()
+                        #     self.image_manipulator.zoomed_image = (
+                        #         self.zoomed_image_original.copy()
+                        #     )
+                        #
+                        # for point in self.current_circle.points:
+                        #     if point is not None:
+                        #         circle_radius = 5
+                        #         circle_color = (0, 255, 0)
+                        #         circle_thickness = -1
+                        #
+                        #         point_x, point_y = point
+                        #
+                        #         cv2.circle(
+                        #             self.image_manipulator.zoomed_image,
+                        #             (point_x, point_y),
+                        #             circle_radius,
+                        #             circle_color,
+                        #             circle_thickness,
+                        #         )
+                        #
+                        # if self.current_circle.finished:
+                        #     print(self.current_circle.points)
+                        #     print("aaa", self.current_circle.contour)
 
-                        self.draw_circle(
-                            self.current_circle,
-                            self.image_manipulator.zoomed_image,
-                            self.image_manipulator.image,
-                        )
+                        # self.image_manipulator.draw_annotation_point(
+                        #             self.image_manipulator.zoomed_image,
+                        #             self.annotation_window.point_x,
+                        #             self.annotation_window.point_y,
+                        #         )
 
-                    if self.contour_mode:
-                        if self.id != self.contour_id:
-                            self.contour_id = self.id
-                            self.current_contour = Contour(self.id)
-
-                        if self.current_contour.i == 0:
-                            self.clean_image = (
-                                self.image_manipulator.zoomed_image.copy()
-                            )
-                            self.clean_manipulator_image = (
-                                self.image_manipulator.image.copy()
-                            )
-                        else:
-                            self.image_manipulator.draw_annotation_point(
-                                self.image_manipulator.zoomed_image,
-                                self.annotation_window.point_x,
-                                self.annotation_window.point_y,
-                            )
-
-                            self.image_manipulator.draw_annotation_point(
-                                self.image_manipulator.image,
-                                self.navigation_window.point_x,
-                                self.navigation_window.point_y,
-                            )
-
-                        (
-                            self.navigation_window.point_x,
-                            self.navigation_window.point_y,
-                        ) = self.image_manipulator.translate_points(
-                            self.annotation_window.point_x,
-                            self.annotation_window.point_y,
-                        )
-
-                        if self.contour_confirm:
-                            self.contours_list.append(self.current_contour)
-                            self.image_manipulator.zoomed_image = self.clean_image
-                            self.image_manipulator.image = self.clean_manipulator_image
-
-                            self.create_contour_lines(
-                                self.current_contour,
-                                self.image_manipulator.zoomed_image,
-                                self.current_contour.points,
-                            )
-
-                            self.create_contour_lines(
-                                self.current_contour,
-                                self.image_manipulator.image,
-                                self.current_contour.translated_points,
-                            )
-
-                            self.id = self.id + 1
-                            self.contour_confirm = not self.contour_confirm
-
-                    if self.select_mode:
-                        if self.selector.i != 0:  # TODO: GAMBIARRA
-                            if (
-                                self.annotation_window.point_x
-                                and self.annotation_window.point_y
-                            ):
-                                self.select_contour(
-                                    self.annotation_window.point_x,
-                                    self.annotation_window.point_y,
-                                )
-
-                            self.selector.i = 0
+                    # if self.circle_mode:
+                    #     if self.id != self.circle_id:
+                    #         self.circle_id = self.id
+                    #         self.current_circle = Circle(self.id)
+                    #
+                    #     if self.current_circle.i != 0:
+                    #         self.image_manipulator.draw_annotation_point(
+                    #             self.image_manipulator.zoomed_image,
+                    #             self.annotation_window.point_x,
+                    #             self.annotation_window.point_y,
+                    #         )
+                    #
+                    #     (
+                    #         self.navigation_window.point_x,
+                    #         self.navigation_window.point_y,
+                    #     ) = self.image_manipulator.translate_points(
+                    #         self.annotation_window.point_x,
+                    #         self.annotation_window.point_y,
+                    #     )
+                    #
+                    #     self.delete_points()
+                    #
+                    #     self.draw_circle(
+                    #         self.current_circle,
+                    #         self.image_manipulator.zoomed_image,
+                    #         self.image_manipulator.image,
+                    #     )
+                    #
+                    # if self.contour_mode:
+                    #     if self.id != self.contour_id:
+                    #         self.contour_id = self.id
+                    #         self.current_contour = Contour(self.id)
+                    #
+                    #     if self.current_contour.i == 0:
+                    #         self.clean_image = (
+                    #             self.image_manipulator.zoomed_image.copy()
+                    #         )
+                    #         self.clean_manipulator_image = (
+                    #             self.image_manipulator.image.copy()
+                    #         )
+                    #     else:
+                    #         self.image_manipulator.draw_annotation_point(
+                    #             self.image_manipulator.zoomed_image,
+                    #             self.annotation_window.point_x,
+                    #             self.annotation_window.point_y,
+                    #         )
+                    #
+                    #         self.image_manipulator.draw_annotation_point(
+                    #             self.image_manipulator.image,
+                    #             self.navigation_window.point_x,
+                    #             self.navigation_window.point_y,
+                    #         )
+                    #
+                    #     (
+                    #         self.navigation_window.point_x,
+                    #         self.navigation_window.point_y,
+                    #     ) = self.image_manipulator.translate_points(
+                    #         self.annotation_window.point_x,
+                    #         self.annotation_window.point_y,
+                    #     )
+                    #
+                    #     if self.contour_confirm:
+                    #         self.contours_list.append(self.current_contour)
+                    #         self.image_manipulator.zoomed_image = self.clean_image
+                    #         self.image_manipulator.image = self.clean_manipulator_image
+                    #
+                    #         self.create_contour_lines(
+                    #             self.current_contour,
+                    #             self.image_manipulator.zoomed_image,
+                    #             self.current_contour.points,
+                    #         )
+                    #
+                    #         self.create_contour_lines(
+                    #             self.current_contour,
+                    #             self.image_manipulator.image,
+                    #             self.current_contour.translated_points,
+                    #         )
+                    #
+                    #         self.id = self.id + 1
+                    #         self.contour_confirm = not self.contour_confirm
+                    #
+                    # if self.select_mode:
+                    #     if self.selector.i != 0:  # TODO: GAMBIARRA
+                    #         if (
+                    #             self.annotation_window.point_x
+                    #             and self.annotation_window.point_y
+                    #         ):
+                    #             self.select_contour(
+                    #                 self.annotation_window.point_x,
+                    #                 self.annotation_window.point_y,
+                    #             )
+                    #
+                    #         self.selector.i = 0
 
                 else:
                     self.navigation_window.point_x = None
@@ -459,13 +530,12 @@ class ImageViewerApp:
             ) = self.image_manipulator.translate_points(
                 self.annotation_window.point_x, self.annotation_window.point_y
             )
-            # TODO: Need to fix this gambiarra above
 
             self.current_circle.add_circle_points(
                 self.annotation_window.point_x,
                 self.annotation_window.point_y,
-                self.navigation_window.point_x,
-                self.navigation_window.point_y,
+                # self.navigation_window.point_x,
+                # self.navigation_window.point_y,
             )
 
     def delete_selected_contours(self):
