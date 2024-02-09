@@ -13,7 +13,7 @@ import yaml
 from src.multilabeller.image_manipulator.image_manipulator import ImageManipulator
 from src.multilabeller.window.window import Window
 from src.multilabeller.circle import Circle
-from src.multilabeller.contour import Contour
+from src.multilabeller.drawed_contour import DrawedContour
 from src.multilabeller.selector import Selector
 from src.multilabeller.SAM.sam import SegmentAnything
 
@@ -28,9 +28,7 @@ class ImageViewerApp:
         self.image_original = None
         self.zoomed_image_original = None
         self.select_mode = False
-        self.contour_confirm = False
-        self.contours_list = []
-        self.contour_mode = False
+        self.drawed_contour_mode = False
         self.clean_manipulator_image = None
         self.j = 0
         self.clean_image = []
@@ -48,13 +46,11 @@ class ImageViewerApp:
         self.initialize_SAM()
         self.initialize_main_window()
         self.initialize_queue()
-        self.current_contour = None
 
-        self.selected_contours = []
+        self.current_drawed_contour = None
+        self.current_circle = None
 
         self.annotation_objects = []
-
-        self.current_circle = None
 
     def initialize_SAM(self):
         if self.config["SAM"]["device"] == "gpu":
@@ -163,14 +159,18 @@ class ImageViewerApp:
     def draw_annotation_objects(self):
         original_image = self.zoomed_image_original.copy()
         for annotation_object in self.annotation_objects:
-            if annotation_object.valid:
-                cv2.drawContours(
-                    original_image,
-                    [annotation_object.contour],
-                    -1,
-                    annotation_object.color,
-                    annotation_object.thickness,
-                )
+            if annotation_object is None:
+                continue
+            if not annotation_object.valid:
+                continue
+
+            cv2.drawContours(
+                original_image,
+                [annotation_object.contour],
+                -1,
+                annotation_object.color,
+                annotation_object.thickness,
+            )
         self.image_manipulator.zoomed_image = original_image
 
     def setup_run(self):
@@ -190,13 +190,13 @@ class ImageViewerApp:
 
             self.annotation_window.bind(
                 self.config["left_mouse_click"][os_option],
-                self.mouse_contour_callback,
+                self.mouse_select_callback,
                 add="+",
             )
 
             self.annotation_window.bind(
                 self.config["left_mouse_click"][os_option],
-                self.mouse_select_callback,
+                self.mouse_contour_callback,
                 add="+",
             )
 
@@ -279,67 +279,31 @@ class ImageViewerApp:
                             self.draw_annotation_objects()
                             self.current_circle = None
 
-                            # if not self.current_circle.in_progress:
-                        #     self.current_circle = Circle()
-                        #     self.image_manipulator.zoomed_image = (
-                        #         self.zoomed_image_original.copy()
-                        #     )
-                        #
-                        # for point in self.current_circle.points:
-                        #     if point is not None:
-                        #         circle_radius = 5
-                        #         circle_color = (0, 255, 0)
-                        #         circle_thickness = -1
-                        #
-                        #         point_x, point_y = point
-                        #
-                        #         cv2.circle(
-                        #             self.image_manipulator.zoomed_image,
-                        #             (point_x, point_y),
-                        #             circle_radius,
-                        #             circle_color,
-                        #             circle_thickness,
-                        #         )
-                        #
-                        # if self.current_circle.finished:
-                        #     print(self.current_circle.points)
-                        #     print("aaa", self.current_circle.contour)
+                    if self.drawed_contour_mode:
+                        if self.current_drawed_contour is None:
+                            self.current_drawed_contour = DrawedContour()
+                        elif self.current_drawed_contour.in_progress:
+                            for point in self.current_drawed_contour.points:
+                                if point is not None:
+                                    circle_radius = 5
+                                    circle_color = (0, 255, 0)
+                                    circle_thickness = -1
 
-                        # self.image_manipulator.draw_annotation_point(
-                        #             self.image_manipulator.zoomed_image,
-                        #             self.annotation_window.point_x,
-                        #             self.annotation_window.point_y,
-                        #         )
+                                    point_x, point_y = point
 
-                    # if self.circle_mode:
-                    #     if self.id != self.circle_id:
-                    #         self.circle_id = self.id
-                    #         self.current_circle = Circle(self.id)
-                    #
-                    #     if self.current_circle.i != 0:
-                    #         self.image_manipulator.draw_annotation_point(
-                    #             self.image_manipulator.zoomed_image,
-                    #             self.annotation_window.point_x,
-                    #             self.annotation_window.point_y,
-                    #         )
-                    #
-                    #     (
-                    #         self.navigation_window.point_x,
-                    #         self.navigation_window.point_y,
-                    #     ) = self.image_manipulator.translate_points(
-                    #         self.annotation_window.point_x,
-                    #         self.annotation_window.point_y,
-                    #     )
-                    #
-                    #     self.delete_points()
-                    #
-                    #     self.draw_circle(
-                    #         self.current_circle,
-                    #         self.image_manipulator.zoomed_image,
-                    #         self.image_manipulator.image,
-                    #     )
-                    #
-                    # if self.contour_mode:
+                                    cv2.circle(
+                                        self.image_manipulator.zoomed_image,
+                                        (point_x, point_y),
+                                        circle_radius,
+                                        circle_color,
+                                        circle_thickness,
+                                    )
+                        # elif self.current_drawed_contour.finished:
+                        # TODO #1: DRAWED CONTOUR IMPLEMENTATION SHOULD BE HERE
+                        # self.annotation_objects.append(self.current_drawed_contour)
+
+                        # self.current_drawed_contour = None
+
                     #     if self.id != self.contour_id:
                     #         self.contour_id = self.id
                     #         self.current_contour = Contour(self.id)
@@ -430,7 +394,9 @@ class ImageViewerApp:
 
     def mouse_select_callback(self, event):
         if self.select_mode:
-            self.selector.point_check()
+            self.selector.update_point(
+                self.annotation_window.point_x, self.annotation_window.point_y
+            )
 
     def select_contour(self):
         for obj in self.annotation_objects:
@@ -448,6 +414,16 @@ class ImageViewerApp:
                     obj.toggle_color()
                     obj.toggle_selection()
                     self.selector.valid = False
+
+            if obj.__class__.__name__ == "DrawedContour":
+                point = (point_x, point_y)
+                cnt_points = np.array([obj.points], np.int32)
+                dist = cv2.pointPolygonTest(cnt_points, point, measureDist=True)
+                if dist >= 0:
+                    obj.toggle_color()
+                    obj.toggle_selection()
+                    self.selector.valid = False
+
         #
         #     if obj.__class__.__name__ == "Contour":
         #         point = (point_x, point_y)
@@ -472,16 +448,16 @@ class ImageViewerApp:
 
     def trigger(self, event):
         if event.char == self.config["shortcuts"]["contour_mode"]:
-            self.contour_mode = not self.contour_mode
+            self.drawed_contour_mode = not self.drawed_contour_mode
             self.circle_mode = False
             self.select_mode = False
-            if self.contour_mode:
+            if self.drawed_contour_mode:
                 print("Contour mode on")
             else:
                 print("Contour mode off")
         elif event.char == self.config["shortcuts"]["circle_mode"]:
             self.circle_mode = not self.circle_mode
-            self.contour_mode = False
+            self.drawed_contour_mode = False
             self.select_mode = False
             if self.circle_mode:
                 print("Circle mode on")
@@ -489,7 +465,7 @@ class ImageViewerApp:
                 print("Circle mode off")
         elif event.char == self.config["shortcuts"]["select_mode"]:
             self.select_mode = not self.select_mode
-            self.contour_mode = False
+            self.drawed_contour_mode = False
             self.circle_mode = False
             if self.select_mode:
                 print("Select mode on")
@@ -498,9 +474,25 @@ class ImageViewerApp:
 
         elif event.keysym == self.config["shortcuts"]["delete_contour"]:
             self.invalidate_selected_contours()
-        # elif event.char == self.config["shortcuts"]["save_contour"]:
-        #     self.contour_confirm = not self.contour_confirm
-        #     print("Contour saved")
+
+        elif event.char == self.config["shortcuts"]["save_contour"]:
+            if self.drawed_contour_mode:
+                # TODO #1: DRAWED CONTOUR IMPLEMENTATION SHOULD NOOOOOT BE HERE
+                # TODO #2: Pressing spacerbar two times breaks the program!
+                # TODO #3: Check for problem in the different modes. Only one should be selected!
+                # TODO #4: Translate from annnotation to navigation window should be improved!
+                # TODO #5: Add ellipse
+                # TODO #6: Check for SAM
+                # TODO #7: Fix/Investigate lag in ROI at navigation WINDOWW
+
+                self.current_drawed_contour.to_cv2_contour()
+                self.current_drawed_contour.in_progress = False
+                self.current_drawed_contour.finished = True
+                self.annotation_objects.append(self.current_drawed_contour)
+                self.draw_annotation_objects()  # TODO: Fix it!
+                self.current_drawed_contour = None
+                # print("tudo certo com esse contorno aqui")
+
         # elif event.keysym == self.config["shortcuts"]["delete_contour"]:
         #     self.delete_selected_contours()
         # elif event.keysym == self.config["shortcuts"]["apply_SAM"]:
@@ -545,11 +537,6 @@ class ImageViewerApp:
                 self.annotation_window.point_y,
             )
 
-        if self.select_mode:
-            self.selector.update_point(
-                self.annotation_window.point_x, self.annotation_window.point_y
-            )
-
     def invalidate_selected_contours(self):
         N_invalid_contours = 0
         for obj in self.annotation_objects:
@@ -580,19 +567,9 @@ class ImageViewerApp:
                 )
 
     def mouse_contour_callback(self, event):
-        if self.contour_mode:
-            (
-                self.navigation_window.point_x,
-                self.navigation_window.point_y,
-            ) = self.image_manipulator.translate_points(
-                self.annotation_window.point_x, self.annotation_window.point_y
-            )
-
-            # TODO: Need to fix this gambiarra above
-
-            self.current_contour.add_contour_points(
+        if self.drawed_contour_mode:
+            self.current_drawed_contour.add_contour_points(
                 [self.annotation_window.point_x, self.annotation_window.point_y],
-                [self.navigation_window.point_x, self.navigation_window.point_y],
             )
 
     def create_contour_lines(self, obj, image, points):

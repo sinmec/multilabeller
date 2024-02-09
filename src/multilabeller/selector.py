@@ -9,6 +9,3 @@ class Selector:
         self.point_x = point_x
         self.point_y = point_y
         self.valid = True
-
-    def point_check(self):
-        self.i += 1

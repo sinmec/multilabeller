@@ -7,7 +7,7 @@ GREEN = (0, 0, 255)
 
 class Circle:
     def __init__(self):
-        self.i = 0
+        self.index_points = 0
         self.points = [None, None]
         self.translated_points = [None, None]
 
@@ -46,12 +46,12 @@ class Circle:
         self.contour = cv2_contour
 
     def add_circle_points(self, point_x, point_y):
-        self.points[self.i] = (point_x, point_y)
-        self.i += 1
+        self.points[self.index_points] = (point_x, point_y)
+        self.index_points += 1
 
-        if self.i == 2:
+        if self.index_points == 2:
             self.create_circle()
-            self.i = 0
+            self.index_points = 0
             self.in_progress = False
             self.finished = True
             self.to_cv2_contour()
