@@ -27,14 +27,14 @@ left_mouse_click:
   linux: "<Double-Button-1>"
 
 SAM:
-  device: "cuda"
+  device: "cpu"
   model: "vit_b" # vit_l; vit_b or vit_h
 
 shortcuts:
   circle_mode: "b"
-  contour_mode: "c"
-  select_mode: "v"
-  save_contour: " "
+  drawed_contour_mode: "c"
+  save_drawed_contour: " "
+  selection_mode: "v"
   delete_contour: "BackSpace"
   apply_SAM: "s"
   annotation_mode: "<F9>" #TODO:Improve exiting mode when in annotation mode!
