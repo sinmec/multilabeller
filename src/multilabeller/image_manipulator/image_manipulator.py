@@ -116,15 +116,3 @@ class ImageManipulator:
 
         self.zoomed_image = cv2.resize(image_ROI, new_size)
         self.zoomed_image_buffer = self.zoomed_image.copy()
-
-    def draw_annotation_point(self, image, point_x, point_y):
-        # TODO: This is dumb! Think on a smart solution!
-        if (point_x is None) or (point_y is None):
-            return
-        circle_radius = 5
-        circle_color = (0, 255, 0)
-        circle_thickness = -1
-
-        cv2.circle(
-            image, (point_x, point_y), circle_radius, circle_color, circle_thickness
-        )

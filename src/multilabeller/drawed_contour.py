@@ -1,4 +1,3 @@
-import cv2
 import numpy as np
 
 RED = (255, 0, 0)

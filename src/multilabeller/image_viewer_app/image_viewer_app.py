@@ -6,16 +6,15 @@ import tkinter as tk
 from pathlib import Path
 
 import cv2
-import numpy as np
 import torch
 import yaml
 
-from src.multilabeller.image_manipulator.image_manipulator import ImageManipulator
-from src.multilabeller.window.window import Window
+from src.multilabeller.SAM.sam import SegmentAnything
 from src.multilabeller.circle import Circle
 from src.multilabeller.drawed_contour import DrawedContour
+from src.multilabeller.image_manipulator.image_manipulator import ImageManipulator
 from src.multilabeller.selector import Selector
-from src.multilabeller.SAM.sam import SegmentAnything
+from src.multilabeller.window.window import Window
 
 if os.name == "nt":
     os_option = "windows"
@@ -260,26 +259,6 @@ class ImageViewerApp:
                             print("soy circulito")
                         if self.current_circle.finished:
                             self.current_circle = None
-                        # elif self.current_circle.in_progress:
-                        #     for point in self.current_circle.points:
-                        #         if point is not None:
-                        #             circle_radius = 5
-                        #             circle_color = (0, 255, 0)
-                        #             circle_thickness = -1
-                        #
-                        #             point_x, point_y = point
-                        #
-                        #             cv2.circle(
-                        #                 self.image_manipulator.zoomed_image,
-                        #                 (point_x, point_y),
-                        #                 circle_radius,
-                        #                 circle_color,
-                        #                 circle_thickness,
-                        #             )
-                        # elif self.current_circle.finished:
-                        #     self.annotation_objects.append(self.current_circle)
-                        #     # self.draw_annotation_objects()
-                        #     self.current_circle = None
 
                     if self.operation_mode == "drawed_contour":
                         if self.current_drawed_contour is None:

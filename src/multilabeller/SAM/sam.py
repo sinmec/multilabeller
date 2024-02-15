@@ -1,9 +1,7 @@
 import cv2
-import matplotlib.pyplot as plt
-from segment_anything import SamAutomaticMaskGenerator, sam_model_registry
 import numpy as np
-import torch
-import os
+from segment_anything import SamAutomaticMaskGenerator, sam_model_registry
+
 from src.multilabeller.drawed_contour import DrawedContour
 
 
