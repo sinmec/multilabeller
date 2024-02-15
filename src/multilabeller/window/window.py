@@ -9,7 +9,7 @@ class Window(tk.Toplevel):
     def __init__(self, parent, title, config, shared_queue, contour_collection):
         super().__init__(parent)
 
-        self.original_zoomed_image = None
+        self.original_annotation_image = None
         self.title_string = title
         self.title(title)
         self.label = tk.Label(self, text=f"{title}")
@@ -44,8 +44,7 @@ class Window(tk.Toplevel):
     def set_image_manipulator(self, image_manipulator):
         self.image_manipulator = image_manipulator
 
-    # TODO: Think on a solution to have only a single 'display_image'
-    def display_image(self, image):
+    def display_navigation_image(self, image):
         if self.image_manipulator is None:
             print(
                 f"Warning: No image manipulator in window {self.title_string} was defined."
@@ -54,7 +53,7 @@ class Window(tk.Toplevel):
 
         self.draw_navigation_window_objects()
 
-        image = Image.fromarray(self.image_manipulator.image)
+        image = Image.fromarray(self.image_manipulator.navigation_image)
         photo = ImageTk.PhotoImage(image=image)
 
         self.canvas.create_image(0, 0, anchor=tk.NW, image=photo)
@@ -62,7 +61,7 @@ class Window(tk.Toplevel):
 
     def draw_annotation_window_objects(self):
 
-        image_copy = self.image_manipulator.zoomed_image_buffer.copy()
+        image_copy = self.image_manipulator.annotation_image_buffer.copy()
 
         for annotation_object in self.contour_collection.items:
             if annotation_object.finished:
@@ -104,11 +103,11 @@ class Window(tk.Toplevel):
                     annotation_object.thickness,
                 )
 
-        self.image_manipulator.zoomed_image = image_copy
+        self.image_manipulator.annotation_image = image_copy
 
     def draw_navigation_window_objects(self):
 
-        image_copy = self.image_manipulator.image_buffer.copy()
+        image_copy = self.image_manipulator.navigation_image_buffer.copy()
 
         for annotation_object in self.contour_collection.items:
 
@@ -132,12 +131,9 @@ class Window(tk.Toplevel):
                 annotation_object.thickness,
             )
 
-        self.image_manipulator.image = image_copy
+        self.image_manipulator.navigation_image = image_copy
 
-    # TODO: Think on a solution to have only a single 'display_image';
-    #       We have an unnecessary 'display_zoomed_image' here!
-    # TODO: rename all ---> two types of images "navigation" and "annotation"
-    def display_zoomed_image(self):
+    def display_annotation_image(self):
         if self.image_manipulator is None:
             print(
                 f"Warning: No image manipulator in window {self.title_string} was defined."
@@ -146,7 +142,7 @@ class Window(tk.Toplevel):
 
         self.draw_annotation_window_objects()
 
-        image = Image.fromarray(self.image_manipulator.zoomed_image)
+        image = Image.fromarray(self.image_manipulator.annotation_image)
         photo = ImageTk.PhotoImage(image=image)
 
         self.canvas.create_image(0, 0, anchor=tk.NW, image=photo)
@@ -159,7 +155,7 @@ class Window(tk.Toplevel):
     def draw_ROI(self, color):
         self.image_manipulator.update_rectangle_size()
         self.image_manipulator.draw_rectangle_ROI(self.mouse_x, self.mouse_y, color)
-        self.image_manipulator.update_zoomed_image()
+        self.image_manipulator.update_annotation_image()
 
         self.last_mouse_event_x = self.mouse_x
         self.last_mouse_event_y = self.mouse_y
@@ -184,10 +180,9 @@ class Window(tk.Toplevel):
                     "mouse_wheel"
                 ]["step_sensibility"]
 
-    def lock_image(self, event):
-        self.annotation_mode = not self.annotation_mode  # TODO: Think of a better name
-        self.original_zoomed_image = self.image_manipulator.zoomed_image.copy()
-        self.original_zoomed_image_buffer = self.image_manipulator.zoomed_image.copy()
+    def lock_annotation_image(self, event):
+        self.annotation_mode = not self.annotation_mode
+        self.original_annotation_image = self.image_manipulator.annotation_image.copy()
 
     def store_annotation_point(self, event):
         self.point_x = self.mouse_x

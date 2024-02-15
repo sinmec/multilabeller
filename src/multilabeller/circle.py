@@ -93,7 +93,7 @@ class Circle:
             points_navigation_window_x = target.x1 + int(
                 (point_x / target.rectangle_ROI_zoom)
                 * (
-                    target.image_original_width
+                    target.navigation_image_width
                     / (target.config["image_viewer"]["width"])
                 )
             )
@@ -103,7 +103,7 @@ class Circle:
             points_navigation_window_y = target.y1 + int(
                 (point_y / target.rectangle_ROI_zoom)
                 * (
-                    target.image_original_width
+                    target.navigation_image_width
                     / (target.config["image_viewer"]["height"])
                 )
             )
@@ -122,14 +122,17 @@ class Circle:
 
             point_annotation_window_x = int(
                 (point_x - target.x1)
-                * (target.config["image_viewer"]["width"] / target.image_original_width)
+                * (
+                    target.config["image_viewer"]["width"]
+                    / target.navigation_image_width
+                )
                 * target.rectangle_ROI_zoom
             )
             point_annotation_window_y = int(
                 (point_y - target.y1)
                 * (
                     target.config["image_viewer"]["height"]
-                    / target.image_original_width
+                    / target.navigation_image_width
                 )
                 * target.rectangle_ROI_zoom
             )

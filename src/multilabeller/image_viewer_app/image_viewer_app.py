@@ -24,22 +24,14 @@ if os.name == "posix":
 
 class ImageViewerApp:
     def __init__(self, root, contour_collection):
-        self.image_original = None
-        self.zoomed_image_original = None
         self.contour_collection = contour_collection
 
-        self.clean_manipulator_image = None
-        self.j = 0
-        self.clean_image = []
         self.root_window = root
         self.image_manipulator = None
         self.config = None
-
         self.navigation_window = None
         self.annotation_window = None
-        self.contour_id = -1
-        self.circle_id = -1
-        self.id = 0
+
         self.selector = Selector()
         self.read_config_file()
         self.initialize_SAM()
@@ -130,8 +122,8 @@ class ImageViewerApp:
             window.status_bar.pack(side=tk.BOTTOM, fill=tk.X)
             window.canvas.pack()
         else:
-            _width = self.image_manipulator.image_original_width
-            _height = self.image_manipulator.image_original_height
+            _width = self.image_manipulator.navigation_image_width
+            _height = self.image_manipulator.navigation_image_height
             window.canvas = tk.Canvas(window, width=_width, height=_height)
             window.canvas.pack()
 
@@ -165,8 +157,8 @@ class ImageViewerApp:
             self.navigation_window.set_image_manipulator(self.image_manipulator)
 
             while True:
-                self.navigation_window.display_image(
-                    self.image_manipulator.zoomed_image
+                self.navigation_window.display_navigation_image(
+                    self.image_manipulator.annotation_image
                 )
                 self.navigation_window.canvas.bind(
                     self.config["mouse_motion"][os_option],
@@ -190,7 +182,7 @@ class ImageViewerApp:
 
                 self.navigation_window.bind(
                     self.config["shortcuts"]["annotation_mode"],
-                    self.navigation_window.lock_image,
+                    self.navigation_window.lock_annotation_image,
                 )
 
                 if not self.navigation_window.annotation_mode:
@@ -234,7 +226,7 @@ class ImageViewerApp:
 
             self.annotation_window.bind(
                 self.config["shortcuts"]["annotation_mode"],
-                self.navigation_window.lock_image,
+                self.navigation_window.lock_annotation_image,
                 add="+",
             )
 
@@ -242,7 +234,7 @@ class ImageViewerApp:
 
             while True:
 
-                self.annotation_window.display_zoomed_image()
+                self.annotation_window.display_annotation_image()
 
                 self.annotation_window.canvas.bind(
                     self.config["mouse_motion"][os_option],
@@ -321,16 +313,12 @@ class ImageViewerApp:
         if self.operation_mode == "drawed_contour":
             if event.char == self.config["shortcuts"]["save_drawed_contour"]:
                 self.save_drawed_contour()
-                # TODO #4: Circle is problematic!
                 # TODO #5: Add ellipse
                 # TODO #6: Check for SAM
 
         if self.operation_mode == "selection":
             if event.keysym == self.config["shortcuts"]["delete_contour"]:
                 self.invalidate_selected_contours()
-
-        # elif event.keysym == self.config["shortcuts"]["apply_SAM"]:
-        #     self.auto_segmentation()
 
     def save_drawed_contour(self):
         if len(self.current_drawed_contour.points_annotation_window) < 3:
@@ -359,11 +347,13 @@ class ImageViewerApp:
             self.contours_list.append(contour)
             self.create_contour_lines(
                 contour,
-                self.image_manipulator.zoomed_image,
+                self.image_manipulator.annotation_image,
                 contour.points_annotation_window,
             )
             self.create_contour_lines(
-                contour, self.image_manipulator.image, contour.points_navigation_window
+                contour,
+                self.image_manipulator.navigation_image,
+                contour.points_navigation_window,
             )
 
         print(f"SAM found {len(self.SAM.contours)} contours!")
