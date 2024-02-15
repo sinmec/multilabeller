@@ -35,6 +35,9 @@ class Contour:
     def to_cv2_contour(self):
         print("Not implemented!")
 
+    def add_points(self):
+        print("Not implemented!")
+
     def translate_from_annotation_to_navigation_windows(self, target):
         for point_annotation_window in self.points_annotation_window:
             if point_annotation_window is None:

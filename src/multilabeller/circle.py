@@ -3,9 +3,6 @@ import numpy as np
 
 from src.multilabeller.contour import Contour
 
-RED = (255, 0, 0)
-GREEN = (0, 0, 255)
-
 
 def create_circle(points):
     center = [
@@ -23,24 +20,9 @@ def create_circle(points):
 class Circle(Contour):
     def __init__(self):
         super().__init__()
-        self.index_points = 0
         self.points_annotation_window = [None, None]
-        self.points_navigation_window = []
-
-        self.valid = True
-        self.color = RED
-        self.thickness = 3
-
-        self.in_progress = True
-        self.finished = False
-
-        self.annotation_window_contour = None
-        self.navigation_window_contour = None
-
-        self.selected = False
 
     def to_cv2_contour(self):
-
         center, radius = create_circle(self.points_annotation_window)
         ellipse_poly = cv2.ellipse2Poly(
             (center[0], center[1]), (radius, radius), 0, 360, 1, 1

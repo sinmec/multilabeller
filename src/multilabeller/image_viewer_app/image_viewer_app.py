@@ -248,7 +248,6 @@ class ImageViewerApp:
                             self.annotation_objects.append(self.current_circle)
                             self.contour_collection.items = self.annotation_objects
                             self.current_circle = self.annotation_objects[-1]
-                            print("soy circulito")
                         if self.current_circle.finished:
                             self.current_circle = None
 

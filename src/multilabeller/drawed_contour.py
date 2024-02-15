@@ -2,28 +2,10 @@ import numpy as np
 
 from src.multilabeller.contour import Contour
 
-RED = (255, 0, 0)
-GREEN = (0, 0, 255)
-
 
 class DrawedContour(Contour):
     def __init__(self):
         super().__init__()
-        self.index_points = 0
-        self.points_annotation_window = []
-        self.points_navigation_window = []
-
-        self.valid = True
-        self.color = RED
-        self.thickness = 3
-
-        self.in_progress = True
-        self.finished = False
-
-        self.annotation_window_contour = None
-        self.navigation_window_contour = None
-
-        self.selected = False
 
     def to_cv2_contour(self):
         N_points = len(self.points_annotation_window)
