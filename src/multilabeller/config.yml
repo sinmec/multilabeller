@@ -9,9 +9,6 @@ navigation_window:
 annotation_window:
   title: "Annotation Window"
 
-ROI:
-  ROI_zoom_step: 5
-
 mouse_motion:
   windows: "<Motion>"
   linux: "<Motion>"
@@ -21,6 +18,7 @@ mouse_wheel:
   linux:
     bind1: "<Button-4>"
     bind2: "<Button-5>"
+  step_sensibility: 1.5
 
 left_mouse_click:
   windows: "<Double-Button-1>"
@@ -37,7 +35,7 @@ shortcuts:
   selection_mode: "v"
   delete_contour: "BackSpace"
   apply_SAM: "s"
-  annotation_mode: "<F9>" #TODO:Improve exiting mode when in annotation mode!
+  annotation_mode: "<F9>"
 
 #TODO: It should work with any image size, but its not working. We'll check this out in the future
 image_viewer:

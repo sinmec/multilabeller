@@ -9,7 +9,9 @@ class ImageManipulator:
         self.zoomed_image_original = image.copy()
         self.i = 0
         self.image = image.copy()
+        self.image_buffer = image.copy()
         self.zoomed_image = image.copy()
+        self.zoomed_image_buffer = image.copy()
 
         self.image_original_width = 0
         self.image_original_height = 0
@@ -64,8 +66,8 @@ class ImageManipulator:
             self.image_original_height / self.rectangle_ROI_zoom
         )
 
-    def draw_rectangle_ROI(self, mouse_x, mouse_y):
-        rectangle_color = (0, 255, 0)
+    def draw_rectangle_ROI(self, mouse_x, mouse_y, color):
+        rectangle_color = color
         rectangle_width = 2
 
         # TODO: Better names, those are the rectangle ROI points!
@@ -90,6 +92,8 @@ class ImageManipulator:
             rectangle_width,
         )
 
+        self.image_buffer = self.image.copy()
+
     def update_zoomed_image(self):
         x1, x2, y1, y2 = self.zoomed_image_coordinates
         image_ROI = self.image_original[y1:y2, x1:x2]
@@ -111,6 +115,7 @@ class ImageManipulator:
         )
 
         self.zoomed_image = cv2.resize(image_ROI, new_size)
+        self.zoomed_image_buffer = self.zoomed_image.copy()
 
     def draw_annotation_point(self, image, point_x, point_y):
         # TODO: This is dumb! Think on a smart solution!
@@ -123,17 +128,3 @@ class ImageManipulator:
         cv2.circle(
             image, (point_x, point_y), circle_radius, circle_color, circle_thickness
         )
-
-    def translate_points(self, point_x, point_y):
-        # TODO: This is dumb! Think on a smart solution!
-        if (point_x is None) or (point_y is None):
-            return None, None
-        point_x_translated = self.x1 + int(
-            (point_x / self.rectangle_ROI_zoom)
-            * (self.image_original_width / (self.config["image_viewer"]["width"]))
-        )
-        point_y_translated = self.y1 + int(
-            (point_y / self.rectangle_ROI_zoom)
-            * (self.image_original_width / (self.config["image_viewer"]["height"]))
-        )
-        return point_x_translated, point_y_translated
