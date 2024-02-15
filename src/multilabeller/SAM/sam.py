@@ -44,5 +44,5 @@ class SegmentAnything:
             coordinates_array = mask_contours[0]
             coordinates_list = coordinates_array.reshape(-1, 2).tolist()
             for item in coordinates_list:
-                contour.add_contour_points(item, None)
+                contour.add_points(item, None)
             self.contours.append(contour)

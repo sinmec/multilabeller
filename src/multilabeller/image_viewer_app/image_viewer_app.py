@@ -342,7 +342,7 @@ class ImageViewerApp:
                     translated_point = self.image_manipulator.translate_from_annotation_to_navigation_windows(
                         point[0], point[1]
                     )
-                    contour.add_contour_points(None, translated_point)
+                    contour.add_points(None, translated_point)
 
             self.contours_list.append(contour)
             self.create_contour_lines(
@@ -360,7 +360,7 @@ class ImageViewerApp:
 
     def mouse_circle_callback(self, event):
         if self.operation_mode == "circle":
-            self.current_circle.add_circle_points(
+            self.current_circle.add_points(
                 self.annotation_window.point_x,
                 self.annotation_window.point_y,
                 self.image_manipulator,
@@ -377,7 +377,7 @@ class ImageViewerApp:
 
     def mouse_contour_callback(self, event):
         if self.operation_mode == "drawed_contour":
-            self.current_drawed_contour.add_contour_points(
+            self.current_drawed_contour.add_points(
                 [self.annotation_window.point_x, self.annotation_window.point_y],
             )
 
