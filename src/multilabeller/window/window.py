@@ -79,7 +79,7 @@ class Window(tk.Toplevel):
                 if len(annotation_object.points_annotation_window) > 0:
                     for point in annotation_object.points_annotation_window:
                         if point is not None:
-                            circle_radius = 5
+                            circle_radius = 4
                             circle_color = (0, 255, 0)
                             circle_thickness = -1
 
@@ -94,6 +94,21 @@ class Window(tk.Toplevel):
                             )
 
             elif annotation_object.finished:
+                # if annotation_object.__class__.__name__ == "Ellipse":
+                #     for point in annotation_object.points_annotation_window:
+                #         point_x, point_y = point
+                #         circle_radius = 2
+                #         circle_color = (0, 255, 0)
+                #         circle_thickness = -1
+                #         cv2.circle(
+                #             image_copy,
+                #             (point_x, point_y),
+                #             circle_radius,
+                #             circle_color,
+                #             circle_thickness,
+                #         )
+                #         continue
+
                 cv2.drawContours(
                     image_copy,
                     [annotation_object.annotation_window_contour],
@@ -101,6 +116,18 @@ class Window(tk.Toplevel):
                     annotation_object.color,
                     annotation_object.thickness,
                 )
+
+            # TODO: Think on a smart solution
+            if annotation_object.__class__.__name__ == "Ellipse":
+                if annotation_object.in_configuration:
+                    annotation_object.to_cv2_contour()
+                    cv2.drawContours(
+                        image_copy,
+                        [annotation_object.annotation_window_contour],
+                        -1,
+                        (0,255,0),
+                        annotation_object.thickness,
+                    )
 
         self.image_manipulator.annotation_image = image_copy
 

@@ -30,8 +30,9 @@ SAM:
 
 shortcuts:
   circle_mode: "b"
+  ellipse_mode: "e"
   drawed_contour_mode: "c"
-  save_drawed_contour: " "
+  save_contour: " "
   selection_mode: "v"
   delete_contour: "BackSpace"
   apply_SAM: "s"

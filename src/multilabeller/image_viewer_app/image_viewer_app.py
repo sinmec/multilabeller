@@ -12,6 +12,7 @@ import yaml
 from src.multilabeller.SAM.sam import SegmentAnything
 from src.multilabeller.circle import Circle
 from src.multilabeller.drawed_contour import DrawedContour
+from src.multilabeller.ellipse import Ellipse
 from src.multilabeller.image_manipulator.image_manipulator import ImageManipulator
 from src.multilabeller.selector import Selector
 from src.multilabeller.window.window import Window
@@ -42,6 +43,7 @@ class ImageViewerApp:
 
         self.current_drawed_contour = None
         self.current_circle = None
+        self.current_ellipse = None
 
         self.annotation_objects = []
 
@@ -97,13 +99,14 @@ class ImageViewerApp:
 
     def create_annotation_window_text(self):
         text = ""
-        text += f"{self.config['shortcuts']['annotation_mode']} -> Lock Image | "
-        text += f"{self.config['shortcuts']['drawed_contour_mode']} ->  Drawed Contour Mode | "
-        text += f"{self.config['shortcuts']['save_drawed_contour']} ->  Save Drawed Contour | "
-        text += f"{self.config['shortcuts']['circle_mode']} ->  Circle Mode | "
-        text += f"{self.config['shortcuts']['selection_mode']} ->  Select Mode | "
-        text += f"{self.config['shortcuts']['delete_contour']} ->  Delete Contours | "
-        text += f"{self.config['shortcuts']['apply_SAM']} ->  Auto Segmentation"
+        text += f"{self.config['shortcuts']['annotation_mode']}: Lock Image | "
+        text += f"{self.config['shortcuts']['circle_mode']}: Circle Mode | "
+        text += f"{self.config['shortcuts']['ellipse_mode']}: Ellipse Mode | "
+        text += f"{self.config['shortcuts']['drawed_contour_mode']}: Drawed Contour Mode | "
+        text += f"Space: Save Drawed Contour | "
+        text += f"{self.config['shortcuts']['selection_mode']}: Select Mode | "
+        text += f"{self.config['shortcuts']['delete_contour']}: Delete Contours | "
+        text += f"{self.config['shortcuts']['apply_SAM']}: Auto Segmentation"
 
         return text
 
@@ -214,6 +217,18 @@ class ImageViewerApp:
 
             self.annotation_window.bind(
                 self.config["left_mouse_click"][os_option],
+                self.mouse_ellipse_callback,
+                add="+",
+            )
+
+            self.annotation_window.bind(
+                self.config["mouse_wheel"][os_option],
+                self.mouse_configure_ellipse_minor_axis_callback,
+                add="+",
+            )
+
+            self.annotation_window.bind(
+                self.config["left_mouse_click"][os_option],
                 self.mouse_select_callback,
                 add="+",
             )
@@ -230,7 +245,7 @@ class ImageViewerApp:
                 add="+",
             )
 
-            self.annotation_window.bind("<Key>", self.trigger, add="+")
+            self.annotation_window.bind("<Key>", self.shortcut_selector, add="+")
 
             while True:
                 self.annotation_window.display_annotation_image()
@@ -257,6 +272,14 @@ class ImageViewerApp:
                             self.contour_collection.items = self.annotation_objects
                             self.current_drawed_contour = self.annotation_objects[-1]
 
+                    if self.operation_mode == "ellipse":
+                        if self.current_ellipse is None:
+                            self.current_ellipse = Ellipse()
+                            self.annotation_objects.append(self.current_ellipse)
+                            self.contour_collection.items = self.annotation_objects
+                            self.current_ellipse = self.annotation_objects[-1]
+
+
                     if self.operation_mode == "selection":
                         if self.selector.valid:
                             self.select_contour()
@@ -277,6 +300,28 @@ class ImageViewerApp:
                 self.annotation_window.point_x, self.annotation_window.point_y
             )
 
+    def mouse_configure_ellipse_minor_axis_callback(self, event):
+        if self.operation_mode == 'ellipse':
+            if self.current_ellipse.in_configuration:
+                print('ca estou na ellipse')
+                if os.name == "nt":
+                    if event.delta > 0:
+                        self.current_ellipse.minor_axis += 1
+
+                    elif event.delta < 0:
+                        if self.current_ellipse.minor_axis > 0:
+                            self.current_ellipse.minor_axis -= 1
+                if os.name == "posix":
+                    if event.num == 4:
+                        self.current_ellipse.minor_axis += 1
+                    elif event.num == 5:
+                        if self.current_ellipse.minor_axis >0:
+                            self.current_ellipse.minor_axis -= 1
+
+                print('muda', self.current_ellipse.minor_axis)
+
+
+
     def select_contour(self):
         for obj in self.annotation_objects:
             if not obj.valid:
@@ -292,31 +337,48 @@ class ImageViewerApp:
                 obj.toggle_selection()
                 self.selector.valid = False
 
-    def trigger(self, event):
+    def shortcut_selector(self, event):
         if event.char == self.config["shortcuts"]["drawed_contour_mode"]:
             print("Drawed contour mode")
             self.operation_mode = "drawed_contour"
-
         elif event.char == self.config["shortcuts"]["circle_mode"]:
             print("Circle mode")
             self.operation_mode = "circle"
-
         elif event.char == self.config["shortcuts"]["selection_mode"]:
             print("Selection mode")
             self.operation_mode = "selection"
         elif event.keysym == self.config["shortcuts"]["apply_SAM"]:
+            print("SAM mode")
             self.auto_segmentation()
+        elif event.keysym == self.config["shortcuts"]["ellipse_mode"]:
+            print("Ellipse mode")
+            self.operation_mode = 'ellipse'
+        elif event.char == self.config["shortcuts"]["save_contour"]:
+            if self.operation_mode == "drawed_contour":
+                self.save_drawed_contour()
+            elif self.operation_mode == "ellipse":
+                self.save_ellipse_contour()
+        elif event.keysym == self.config["shortcuts"]["delete_contour"]:
+            if self.operation_mode == "selection":
+                self.invalidate_selected_contours()
         else:
             print(f"Please chose a valid option!")
 
-        if self.operation_mode == "drawed_contour":
-            if event.char == self.config["shortcuts"]["save_drawed_contour"]:
-                self.save_drawed_contour()
-                # TODO #5: Add ellipse
 
-        if self.operation_mode == "selection":
-            if event.keysym == self.config["shortcuts"]["delete_contour"]:
-                self.invalidate_selected_contours()
+
+    def save_ellipse_contour(self):
+        if self.current_ellipse.in_configuration:
+            self.current_ellipse.translate_from_annotation_to_navigation_windows(
+                self.image_manipulator
+            )
+            self.current_ellipse.translate_from_navigation_to_annotation_windows(
+                self.image_manipulator
+            )
+            self.current_ellipse.to_cv2_contour()
+            self.current_ellipse.in_progress = False
+            self.current_ellipse.in_configuration = False
+            self.current_ellipse.finished = True
+            self.current_ellipse = None
 
     def save_drawed_contour(self):
         if len(self.current_drawed_contour.points_annotation_window) < 3:
@@ -341,6 +403,7 @@ class ImageViewerApp:
             self.annotation_objects.append(SAM_contour)
             self.contour_collection.items = self.annotation_objects
 
+    #TODO: Merge with ellipse's one
     def mouse_circle_callback(self, event):
         if self.operation_mode == "circle":
             self.current_circle.add_points(
@@ -348,6 +411,16 @@ class ImageViewerApp:
                 self.annotation_window.point_y,
                 self.image_manipulator,
             )
+
+    def mouse_ellipse_callback(self, event):
+        if self.operation_mode == "ellipse":
+            self.current_ellipse.add_points(
+                self.annotation_window.point_x,
+                self.annotation_window.point_y,
+                self.image_manipulator,
+            )
+            # if self.current_ellipse.in_configuration:
+            #     self.current_ellipse.update
 
     def invalidate_selected_contours(self):
         N_invalid_contours = 0

@@ -2,7 +2,6 @@ import cv2
 
 
 def add_small_contours(event, x, y, flags, param):
-    # print(key)
     contour_collection = param[0]
     img = param[1]
     if event == cv2.EVENT_LBUTTONDBLCLK:
