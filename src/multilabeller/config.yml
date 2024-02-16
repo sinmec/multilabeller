@@ -25,7 +25,7 @@ left_mouse_click:
   linux: "<Double-Button-1>"
 
 SAM:
-  device: "cpu"
+  device: "cpu" # "cpu" or "cuda"
   model: "vit_b" # vit_l; vit_b or vit_h
 
 shortcuts:

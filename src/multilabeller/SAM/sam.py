@@ -2,15 +2,16 @@ import cv2
 import numpy as np
 from segment_anything import SamAutomaticMaskGenerator, sam_model_registry
 
+from src.multilabeller.SAM_contour import SAM_Contour
 from src.multilabeller.drawed_contour import DrawedContour
 
 
 class SegmentAnything:
     def __init__(self, config):
         self.mask_generator = None
-        self.contour_id = 0
-
+        self.image_manipulator = None
         self.initialize(config)
+        self.contours = []
 
     def initialize(self, config):
         model_type = config["model"]["name"]
@@ -22,7 +23,8 @@ class SegmentAnything:
 
     def apply(self, image_input):
         masks = self.mask_generator.generate(image_input)
-        self.contours = []
+
+        mask_contours = []
 
         if len(masks) == 0:
             return
@@ -35,14 +37,36 @@ class SegmentAnything:
         for each_gen in masks:
             boolean_mask = each_gen["segmentation"]
             uint8_mask = 255 * np.uint8(boolean_mask)
-            mask_contours, _ = cv2.findContours(
-                uint8_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+            mask_contour, _ = cv2.findContours(
+                uint8_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE
             )
-            self.contour_id += 1
-            contour = DrawedContour(self.contour_id)
 
-            coordinates_array = mask_contours[0]
+            x_coordinates = mask_contour[0][:, 0, 0]
+            y_coordinates = mask_contour[0][:, 0, 1]
+
+            if np.nanmin(x_coordinates) == 0:
+                continue
+            if np.nanmin(y_coordinates) == 0:
+                continue
+            if np.nanmax(x_coordinates) > img_w - 2:
+                continue
+            if np.nanmax(y_coordinates) > img_h - 2:
+                continue
+
+            mask_contours.append(mask_contour)
+
+        for mask_contour in mask_contours:
+            SAM_contour = SAM_Contour()
+
+            coordinates_array = mask_contour[0]
             coordinates_list = coordinates_array.reshape(-1, 2).tolist()
-            for item in coordinates_list:
-                contour.add_points(item, None)
-            self.contours.append(contour)
+            for point in coordinates_list:
+                SAM_contour.add_points(point)
+            SAM_contour.translate_from_annotation_to_navigation_windows(
+                self.image_manipulator
+            )
+            SAM_contour.to_cv2_contour()
+            SAM_contour.in_progress = False
+            SAM_contour.finished = True
+
+            self.contours.append(SAM_contour)

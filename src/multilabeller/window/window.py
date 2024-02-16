@@ -60,7 +60,6 @@ class Window(tk.Toplevel):
         self.canvas.photo = photo
 
     def draw_annotation_window_objects(self):
-
         image_copy = self.image_manipulator.annotation_image_buffer.copy()
 
         for annotation_object in self.contour_collection.items:
@@ -106,11 +105,9 @@ class Window(tk.Toplevel):
         self.image_manipulator.annotation_image = image_copy
 
     def draw_navigation_window_objects(self):
-
         image_copy = self.image_manipulator.navigation_image_buffer.copy()
 
         for annotation_object in self.contour_collection.items:
-
             if annotation_object is None:
                 continue
             if not annotation_object.valid:

@@ -233,7 +233,6 @@ class ImageViewerApp:
             self.annotation_window.bind("<Key>", self.trigger, add="+")
 
             while True:
-
                 self.annotation_window.display_annotation_image()
 
                 self.annotation_window.canvas.bind(
@@ -294,7 +293,6 @@ class ImageViewerApp:
                 self.selector.valid = False
 
     def trigger(self, event):
-
         if event.char == self.config["shortcuts"]["drawed_contour_mode"]:
             print("Drawed contour mode")
             self.operation_mode = "drawed_contour"
@@ -306,6 +304,8 @@ class ImageViewerApp:
         elif event.char == self.config["shortcuts"]["selection_mode"]:
             print("Selection mode")
             self.operation_mode = "selection"
+        elif event.keysym == self.config["shortcuts"]["apply_SAM"]:
+            self.auto_segmentation()
         else:
             print(f"Please chose a valid option!")
 
@@ -313,7 +313,6 @@ class ImageViewerApp:
             if event.char == self.config["shortcuts"]["save_drawed_contour"]:
                 self.save_drawed_contour()
                 # TODO #5: Add ellipse
-                # TODO #6: Check for SAM
 
         if self.operation_mode == "selection":
             if event.keysym == self.config["shortcuts"]["delete_contour"]:
@@ -333,29 +332,14 @@ class ImageViewerApp:
 
     def auto_segmentation(self):
         print("Applying SAM...")
-        self.SAM.apply(self.zoomed_image_original.copy())
-
-        for contour in self.SAM.contours:
-            for point in contour.points_annotation_window:
-                if point:
-                    translated_point = self.image_manipulator.translate_from_annotation_to_navigation_windows(
-                        point[0], point[1]
-                    )
-                    contour.add_points(None, translated_point)
-
-            self.contours_list.append(contour)
-            self.create_contour_lines(
-                contour,
-                self.image_manipulator.annotation_image,
-                contour.points_annotation_window,
-            )
-            self.create_contour_lines(
-                contour,
-                self.image_manipulator.navigation_image,
-                contour.points_navigation_window,
-            )
-
+        self.SAM.image_manipulator = self.image_manipulator
+        self.SAM.apply(self.image_manipulator.annotation_image_buffer.copy())
+        print("SAM contour detection finished!")
         print(f"SAM found {len(self.SAM.contours)} contours!")
+
+        for SAM_contour in self.SAM.contours:
+            self.annotation_objects.append(SAM_contour)
+            self.contour_collection.items = self.annotation_objects
 
     def mouse_circle_callback(self, event):
         if self.operation_mode == "circle":
