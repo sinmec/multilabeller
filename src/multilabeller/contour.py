@@ -40,7 +40,9 @@ class Contour:
 
     def translate_from_annotation_to_navigation_windows(self, target):
 
-        self.points_navigation_window = [[None, None] for _ in range(len(self.points_annotation_window))]
+        self.points_navigation_window = [
+            [None, None] for _ in range(len(self.points_annotation_window))
+        ]
         for i, point_annotation_window in enumerate(self.points_annotation_window):
             if point_annotation_window is None:
                 continue
@@ -65,7 +67,6 @@ class Contour:
                     / (target.config["image_viewer"]["height"])
                 )
             )
-
 
             self.points_navigation_window[i][0] = int(points_navigation_window_x)
             self.points_navigation_window[i][1] = int(points_navigation_window_y)
