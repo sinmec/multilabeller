@@ -242,6 +242,12 @@ class ImageViewerApp:
             )
 
             self.annotation_window.bind(
+                "<MouseWheel>",
+                self.mouse_ellipse_axes_callback,
+                add="+",
+            )
+
+            self.annotation_window.bind(
                 self.config["shortcuts"]["annotation_mode"],
                 self.navigation_window.lock_annotation_image,
                 add="+",
@@ -280,6 +286,11 @@ class ImageViewerApp:
                             self.annotation_objects.append(self.current_ellipse)
                             self.contour_collection.items = self.annotation_objects
                             self.current_ellipse = self.annotation_objects[-1]
+                        if self.current_ellipse.in_configuration:
+                            self.current_ellipse.configure_ellipse_parameters()
+                            self.current_ellipse.create_minor_axis_annotation_points()
+                        if self.current_ellipse.finished:
+                            self.current_ellipse = None
 
                     if self.operation_mode == "selection":
                         if self.selector.valid:
@@ -304,11 +315,9 @@ class ImageViewerApp:
     def mouse_configure_ellipse_minor_axis_callback(self, event):
         if self.operation_mode == "ellipse":
             if self.current_ellipse.in_configuration:
-                print("ca estou na ellipse")
                 if os.name == "nt":
                     if event.delta > 0:
                         self.current_ellipse.minor_axis += 1
-
                     elif event.delta < 0:
                         if self.current_ellipse.minor_axis > 0:
                             self.current_ellipse.minor_axis -= 1
@@ -318,8 +327,6 @@ class ImageViewerApp:
                     elif event.num == 5:
                         if self.current_ellipse.minor_axis > 0:
                             self.current_ellipse.minor_axis -= 1
-
-                print("muda", self.current_ellipse.minor_axis)
 
     def select_contour(self):
         for obj in self.annotation_objects:
@@ -355,6 +362,8 @@ class ImageViewerApp:
         elif event.char == self.config["shortcuts"]["save_contour"]:
             if self.operation_mode == "drawed_contour":
                 self.save_drawed_contour()
+            elif self.operation_mode == "ellipse":
+                self.save_ellipse_contour()
         elif event.keysym == self.config["shortcuts"]["delete_contour"]:
             if self.operation_mode == "selection":
                 self.invalidate_selected_contours()
@@ -372,6 +381,26 @@ class ImageViewerApp:
         self.current_drawed_contour.in_progress = False
         self.current_drawed_contour.finished = True
         self.current_drawed_contour = None
+
+    def save_ellipse_contour(self):
+        if self.current_ellipse.points_annotation_window[-1] == None:
+            print("Invalid number of ellipse points!")
+            return
+
+        self.current_ellipse.translate_from_annotation_to_navigation_windows(
+            self.image_manipulator
+        )
+        self.current_ellipse.translate_from_annotation_to_navigation_windows(
+            self.image_manipulator
+        )
+        self.current_ellipse.translate_from_navigation_to_annotation_windows(
+            self.image_manipulator
+        )
+        self.current_ellipse.to_cv2_contour()
+        self.current_ellipse.in_progress = False
+        self.current_ellipse.in_configuration = False
+        self.current_ellipse.finished = True
+        self.current_ellipse = None
 
     def auto_segmentation(self):
         print("Applying SAM...")
@@ -417,6 +446,26 @@ class ImageViewerApp:
             self.current_drawed_contour.add_points(
                 [self.annotation_window.point_x, self.annotation_window.point_y],
             )
+
+    def mouse_ellipse_axes_callback(self, event):
+        if self.operation_mode == "ellipse":
+            if self.current_ellipse.in_configuration:
+                if os.name == "nt":
+                    if event.delta > 0:
+                        self.current_ellipse.minor_axis += 1
+                    elif event.delta < 0:
+                        self.current_ellipse.minor_axis -= 1
+                if os.name == "posix":
+                    if event.num == 4:
+                        self.current_ellipse.minor_axis += 1
+                    elif event.num == 5:
+                        self.current_ellipse.minor_axis -= 1
+                self.current_ellipse.minor_axis = max(
+                    self.current_ellipse.minor_axis, 0
+                )
+                self.current_ellipse.minor_axis = min(
+                    self.current_ellipse.minor_axis, self.current_ellipse.major_axis
+                )
 
     def start(self):
         self.load_image_from_file()

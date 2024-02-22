@@ -63,6 +63,17 @@ class Window(tk.Toplevel):
         image_copy = self.image_manipulator.annotation_image_buffer.copy()
 
         for annotation_object in self.contour_collection.items:
+            if annotation_object.__class__.__name__ == "Ellipse":
+                if annotation_object.in_configuration:
+                    cv2.drawContours(
+                        image_copy,
+                        [annotation_object.ellipse_contour],
+                        -1,
+                        annotation_object.color,
+                        1,
+                    )
+
+        for annotation_object in self.contour_collection.items:
             if annotation_object.finished:
                 annotation_object.translate_from_navigation_to_annotation_windows(
                     self.image_manipulator

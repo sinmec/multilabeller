@@ -7,12 +7,14 @@ from src.multilabeller.contour import Contour
 class Ellipse(Contour):
     def __init__(self):
         super().__init__()
-        self.points_annotation_window = [None, None, None, None, None]
+        self.points_annotation_window = [None, None, None, None]
 
-        # self.center = [None, None]
-        # self.major_axis = 0
-        # self.minor_axis = -1
-        # self.angle = 0
+        self.major_axis = 0
+        self.minor_axis = -1
+        self.angle = 0
+        self.x_c = 0
+        self.y_c = 0
+        self.in_configuration = False
 
         self.parameters = []
 
@@ -21,14 +23,30 @@ class Ellipse(Contour):
         self.points_annotation_window[self.index_points] = [point_x, point_y]
         self.index_points += 1
 
-        if self.index_points == 5:
-            self.from_points_to_ellipse()
-            self.convert_ellipse_to_annotation_points()
-            self.translate_from_annotation_to_navigation_windows(target)
-            self.to_cv2_contour()
+        if self.index_points == 2:
+            self.configure_ellipse_parameters()
+            self.in_configuration = True
             self.index_points = 0
-            self.in_progress = False
-            self.finished = True
+
+    def configure_ellipse_parameters(self):
+        self.x_c, self.y_c = self.calculate_center(self.points_annotation_window)
+        self.major_axis = self.calculate_major_axis(self.points_annotation_window)
+        self.angle = self.calculate_angle(self.points_annotation_window)
+        self.list_to_contour()
+        if self.minor_axis == -1:
+            self.minor_axis = self.major_axis
+
+    def create_minor_axis_annotation_points(self):
+
+        p_2_x = int(self.x_c - 1 * self.minor_axis * np.sin(np.deg2rad(self.angle)))
+        p_2_y = int(self.y_c + 1 * self.minor_axis * np.cos(np.deg2rad(self.angle)))
+
+        self.points_annotation_window[2] = [p_2_x, p_2_y]
+
+        p_2_x = int(self.x_c + 1 * self.minor_axis * np.sin(np.deg2rad(self.angle)))
+        p_2_y = int(self.y_c - 1 * self.minor_axis * np.cos(np.deg2rad(self.angle)))
+
+        self.points_annotation_window[3] = [p_2_x, p_2_y]
 
     def from_points_to_ellipse(self):
 
@@ -56,16 +74,87 @@ class Ellipse(Contour):
             self.points_annotation_window[i][1] = y
 
     def to_cv2_contour(self):
-        N_points = len(self.points_annotation_window)
+
+        x_c, y_c = self.calculate_center(self.points_annotation_window)
+        major_axis = self.calculate_major_axis(self.points_annotation_window)
+        minor_axis = self.calculate_minor_axis(self.points_annotation_window)
+        angle = self.calculate_angle(self.points_annotation_window)
+        ellipse_poly = cv2.ellipse2Poly(
+            (x_c, y_c), (major_axis, minor_axis), int(angle), 360, 1, 1
+        )
+        N_points = len(ellipse_poly)
         cv2_contour = np.zeros((N_points, 1, 2), dtype=int)
-        for i, (x, y) in enumerate(self.points_annotation_window):
-            cv2_contour[i, 0, 0] = self.points_annotation_window[i][0]
-            cv2_contour[i, 0, 1] = self.points_annotation_window[i][1]
+        for i, (x, y) in enumerate(ellipse_poly):
+            cv2_contour[i, 0, 0] = ellipse_poly[i][0]
+            cv2_contour[i, 0, 1] = ellipse_poly[i][1]
         self.annotation_window_contour = cv2_contour
 
-        N_points = len(self.points_navigation_window)
+        x_c, y_c = self.calculate_center(self.points_navigation_window)
+        major_axis = self.calculate_major_axis(self.points_navigation_window)
+        minor_axis = self.calculate_minor_axis(self.points_navigation_window)
+        angle = self.calculate_angle(self.points_navigation_window)
+        ellipse_poly = cv2.ellipse2Poly(
+            (x_c, y_c), (major_axis, minor_axis), int(angle), 360, 1, 1
+        )
+        N_points = len(ellipse_poly)
         cv2_contour = np.zeros((N_points, 1, 2), dtype=int)
-        for i, (x, y) in enumerate(self.points_navigation_window):
-            cv2_contour[i, 0, 0] = self.points_navigation_window[i][0]
-            cv2_contour[i, 0, 1] = self.points_navigation_window[i][1]
+        for i, (x, y) in enumerate(ellipse_poly):
+            cv2_contour[i, 0, 0] = ellipse_poly[i][0]
+            cv2_contour[i, 0, 1] = ellipse_poly[i][1]
         self.navigation_window_contour = cv2_contour
+
+    def calculate_center(self, points):
+        x_1 = points[0][0]
+        x_2 = points[1][0]
+        y_1 = points[0][1]
+        y_2 = points[1][1]
+        x_c = (x_1 + x_2) / 2
+        y_c = (y_1 + y_2) / 2
+        return int(x_c), int(y_c)
+
+    def calculate_major_axis(self, points):
+        x_1 = points[0][0]
+        x_2 = points[1][0]
+        y_1 = points[0][1]
+        y_2 = points[1][1]
+        dx = x_2 - x_1
+        dy = y_2 - y_1
+        major_axis = 0.5 * np.sqrt(dx**2.0 + dy**2.0)
+        return int(major_axis)
+
+    def calculate_minor_axis(self, points):
+        x_1 = points[1][0]
+        x_2 = points[2][0]
+        y_1 = points[1][1]
+        y_2 = points[2][1]
+        dx = x_2 - x_1
+        dy = y_2 - y_1
+        major_axis = 0.5 * np.sqrt(dx**2.0 + dy**2.0)
+        return int(major_axis)
+
+    def calculate_angle(self, points):
+        x_1 = points[0][0]
+        x_2 = points[1][0]
+        y_1 = points[0][1]
+        y_2 = points[1][1]
+        dx = x_2 - x_1
+        dy = y_2 - y_1
+        angle = np.arctan2(dy, dx)
+        return np.rad2deg(angle)
+
+    def list_to_contour(self):
+        ellipse_poly = cv2.ellipse2Poly(
+            (self.x_c, self.y_c),
+            (self.major_axis, self.minor_axis),
+            int(self.angle),
+            360,
+            1,
+            1,
+        )
+
+        N_points = len(ellipse_poly)
+        cv2_contour = np.zeros((N_points, 1, 2), dtype=int)
+        for i, (x, y) in enumerate(ellipse_poly):
+            cv2_contour[i, 0, 0] = ellipse_poly[i][0]
+            cv2_contour[i, 0, 1] = ellipse_poly[i][1]
+        self.ellipse_contour = cv2_contour
