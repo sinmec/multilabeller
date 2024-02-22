@@ -1,52 +1,56 @@
+import cv2
 import numpy as np
 
+from src.multilabeller.contour import Contour
 
-class Circle:
-    def __init__(self, id):
-        self.i = 0
-        self.points = [None, None]
-        self.translated_points = [None, None]
-        self.color = (255, 0, 0)
-        self.thickness = 3
 
-    def add_circle_points(
-        self, point_x, point_y, translated_point_x, translated_point_y
-    ):
-        if self.i <= 1:
-            self.points[self.i] = (point_x, point_y)
-            self.translated_points[self.i] = (translated_point_x, translated_point_y)
-            if self.i < 1:
-                self.i += 1
-            else:
-                self.i = 2
-                self.create_circle(self.points, self.translated_points)
+def create_circle(points):
+    center = [
+        int((points[0][0] + points[1][0]) / 2),
+        int((points[0][1] + points[1][1]) / 2),
+    ]
 
-    def create_circle(self, points, translated_points):
-        # circle on the annotation window
+    radius = int(
+        np.sqrt(pow((points[1][0] - center[0]), 2) + pow((points[1][1] - center[1]), 2))
+    )
 
-        self.center = [
-            int((self.points[0][0] + self.points[1][0]) / 2),
-            int((self.points[0][1] + self.points[1][1]) / 2),
-        ]
+    return center, radius
 
-        self.radius = int(
-            np.sqrt(
-                pow((self.points[1][0] - self.center[0]), 2)
-                + pow((self.points[1][1] - self.center[1]), 2)
-            )
+
+class Circle(Contour):
+    def __init__(self):
+        super().__init__()
+        self.points_annotation_window = [None, None]
+
+    def to_cv2_contour(self):
+        center, radius = create_circle(self.points_annotation_window)
+        ellipse_poly = cv2.ellipse2Poly(
+            (center[0], center[1]), (radius, radius), 0, 360, 1, 1
         )
+        N_points = len(ellipse_poly)
+        cv2_contour = np.zeros((N_points, 1, 2), dtype=int)
+        for i, (x, y) in enumerate(ellipse_poly):
+            cv2_contour[i, 0, 0] = ellipse_poly[i][0]
+            cv2_contour[i, 0, 1] = ellipse_poly[i][1]
+        self.annotation_window_contour = cv2_contour
 
-        # circle on the navigation window
-
-        self.translated_center = [
-            int((self.translated_points[0][0] + self.translated_points[1][0]) / 2),
-            int((self.translated_points[0][1] + self.translated_points[1][1]) / 2),
-        ]
-
-        self.translated_circle_radius = int(
-            np.sqrt(
-                pow((self.translated_points[1][0] - self.translated_center[0]), 2)
-                + pow((self.translated_points[1][1] - self.translated_center[1]), 2)
-            )
+        center, radius = create_circle(self.points_navigation_window)
+        ellipse_poly = cv2.ellipse2Poly(
+            (center[0], center[1]), (radius, radius), 0, 360, 1, 1
         )
-        # todo: improve this
+        N_points = len(ellipse_poly)
+        cv2_contour = np.zeros((N_points, 1, 2), dtype=int)
+        for i, (x, y) in enumerate(ellipse_poly):
+            cv2_contour[i, 0, 0] = ellipse_poly[i][0]
+            cv2_contour[i, 0, 1] = ellipse_poly[i][1]
+        self.navigation_window_contour = cv2_contour
+
+    def add_points(self, point_x, point_y, target):
+        self.points_annotation_window[self.index_points] = [point_x, point_y]
+        self.index_points += 1
+
+        if self.index_points == 2:
+            self.translate_from_annotation_to_navigation_windows(target)
+            self.index_points = 0
+            self.in_progress = False
+            self.finished = True

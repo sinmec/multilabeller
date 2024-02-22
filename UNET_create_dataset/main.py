@@ -136,7 +136,7 @@ for index_imgs in random_array:
             if addMode == "contour":
                 cv2.setMouseCallback(window_name, add_contours, contour_collection)
                 contour = contour_collection.contours[-1]
-                pts = contour.points
+                pts = contour.points_annotation_window
                 if len(pts) > 0:
                     for p in range(len(pts)):
                         x = pts[p][0]
