@@ -3,7 +3,6 @@ import numpy as np
 from segment_anything import SamAutomaticMaskGenerator, sam_model_registry
 
 from src.multilabeller.SAM_contour import SAM_Contour
-from src.multilabeller.drawed_contour import DrawedContour
 
 
 class SegmentAnything:
