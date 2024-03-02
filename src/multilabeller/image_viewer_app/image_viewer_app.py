@@ -28,6 +28,7 @@ class ImageViewerApp:
         self.contour_collection = contour_collection
 
         self.root_window = root
+        self.export_button = None
         self.image_manipulator = None
         self.config = None
         self.navigation_window = None
@@ -87,6 +88,16 @@ class ImageViewerApp:
 
     def initialize_main_window(self):
         self.root_window.title(self.config["root_window"]["name"])
+        self.export_button = tk.Button(self.root_window, text="Export Contours", command=self.export_contours)
+        self.export_button.pack()
+
+    def export_contours(self):
+        output_csv = [['Contour_type']]
+        for i in range(1, 21):
+            output_csv[0].append(f'{i} point')
+
+        for item in range(len(self.contour_collection.items)):
+            a = 2
 
     def initialize_queue(self):
         self.shared_queue = queue.Queue()
