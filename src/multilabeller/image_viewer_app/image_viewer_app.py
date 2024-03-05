@@ -92,12 +92,26 @@ class ImageViewerApp:
         self.export_button.pack()
 
     def export_contours(self):
-        output_csv = [['Contour_type']]
-        for i in range(1, 21):
-            output_csv[0].append(f'{i} point')
+        output = 'Contour_type; points_navigation_window'
+        output_index = 0
+
+        while os.path.exists(f"{self.config['output_image']}/cnt_{output_index}.txt"):
+            output_index += 1
+
+        output_path = f"{self.config['output_image']}/cnt_{output_index}.txt"
 
         for item in range(len(self.contour_collection.items)):
-            a = 2
+            obj = self.contour_collection.items[item]
+
+            if len(obj.points_navigation_window) != 0:
+                output += f'; {obj.__class__.__name__}; {obj.points_navigation_window}'
+
+        print('Started output saving.')
+
+        with open(output_path, 'w') as file:
+            file.write(output)
+
+        print(f'Output saved in {output_path} succesfully!')
 
     def initialize_queue(self):
         self.shared_queue = queue.Queue()
@@ -268,7 +282,6 @@ class ImageViewerApp:
 
             while True:
                 self.annotation_window.display_annotation_image()
-
                 self.annotation_window.canvas.bind(
                     self.config["mouse_motion"][os_option],
                     self.annotation_window.get_mouse_position,

@@ -1,5 +1,7 @@
 test_image: "test/data/out_000001.jpg"
 
+output_image: "test/output"
+
 root_window:
   name: "Main Window"
 
