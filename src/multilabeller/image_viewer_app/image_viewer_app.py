@@ -119,6 +119,19 @@ class ImageViewerApp:
 
         print(f'Output saved in {output_path} succesfully!')
 
+    def export_contours_h5(self):
+        output_index = 1
+
+        Path(f"{self.config['output_path']}").mkdir(parents=True, exist_ok=True)
+
+        while os.path.exists(f"{self.config['output_image']}/cnt_{output_index}.h5"):
+            output_index += 1
+
+        path = f"{self.config['output_path']}/cnt_{output_index}.h5"
+
+        h5file = h5py.File(f"{path}", "w")
+        img_group = h5file.create_group('img')
+
     def initialize_queue(self):
         self.shared_queue = queue.Queue()
 
