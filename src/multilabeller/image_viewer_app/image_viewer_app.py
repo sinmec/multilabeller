@@ -3,6 +3,7 @@ import queue
 import threading
 import time
 import tkinter as tk
+import h5py
 from pathlib import Path
 
 import cv2
@@ -93,19 +94,23 @@ class ImageViewerApp:
         self.export_button.pack()
 
     def export_contours(self):
-        output = 'Contour_type; points_navigation_window'
+        output = 'Contour_type; points_x; points_y'
         output_index = 0
 
-        while os.path.exists(f"{self.config['output_image']}/cnt_{output_index}.txt"):
+        Path(f"{self.config['output_path']}").mkdir(parents=True, exist_ok=True)
+
+        while os.path.exists(f"{self.config['output_path']}/cnt_{output_index}.txt"):
             output_index += 1
 
-        output_path = f"{self.config['output_image']}/cnt_{output_index}.txt"
+        output_path = f"{self.config['output_path']}/cnt_{output_index}.txt"
 
         for item in range(len(self.contour_collection.items)):
             obj = self.contour_collection.items[item]
 
             if len(obj.points_navigation_window) != 0:
-                output += f'; {obj.__class__.__name__}; {obj.points_navigation_window}'
+                x = obj.navigation_window_contour[:, 0, 0]
+                y = obj.navigation_window_contour[:, 0, 1]
+                output += f'\n{obj.__class__.__name__}; {x}; {y}'
 
         print('Started output saving.')
 
