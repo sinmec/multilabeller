@@ -88,6 +88,7 @@ class ImageViewerApp:
 
     def initialize_main_window(self):
         self.root_window.title(self.config["root_window"]["name"])
+        self.root_window.geometry("200x50")
         self.export_button = tk.Button(self.root_window, text="Export Contours", command=self.export_contours)
         self.export_button.pack()
 
