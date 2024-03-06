@@ -7,6 +7,7 @@ import h5py
 from pathlib import Path
 
 import cv2
+import numpy as np
 import torch
 import yaml
 
@@ -93,44 +94,58 @@ class ImageViewerApp:
         self.export_button = tk.Button(self.root_window, text="Export Contours", command=self.export_contours)
         self.export_button.pack()
 
+    # def export_contours(self):
+    #     output = 'Contour_type; points_x; points_y'
+    #     output_index = 0
+    #
+    #     Path(f"{self.config['output_path']}").mkdir(parents=True, exist_ok=True)
+    #
+    #     while os.path.exists(f"{self.config['output_path']}/cnt_{output_index}.txt"):
+    #         output_index += 1
+    #
+    #     output_path = f"{self.config['output_path']}/cnt_{output_index}.txt"
+    #
+    #     for item in range(len(self.contour_collection.items)):
+    #         obj = self.contour_collection.items[item]
+    #
+    #         if len(obj.points_navigation_window) != 0:
+    #             x = obj.navigation_window_contour[:, 0, 0]
+    #             y = obj.navigation_window_contour[:, 0, 1]
+    #             output += f'\n{obj.__class__.__name__}; {x}; {y}'
+    #
+    #     print('Started output saving.')
+    #
+    #     with open(output_path, 'w') as file:
+    #         file.write(output)
+    #
+    #     print(f'Output saved in {output_path} succesfully!')
+
     def export_contours(self):
-        output = 'Contour_type; points_x; points_y'
-        output_index = 0
-
-        Path(f"{self.config['output_path']}").mkdir(parents=True, exist_ok=True)
-
-        while os.path.exists(f"{self.config['output_path']}/cnt_{output_index}.txt"):
-            output_index += 1
-
-        output_path = f"{self.config['output_path']}/cnt_{output_index}.txt"
-
-        for item in range(len(self.contour_collection.items)):
-            obj = self.contour_collection.items[item]
-
-            if len(obj.points_navigation_window) != 0:
-                x = obj.navigation_window_contour[:, 0, 0]
-                y = obj.navigation_window_contour[:, 0, 1]
-                output += f'\n{obj.__class__.__name__}; {x}; {y}'
-
-        print('Started output saving.')
-
-        with open(output_path, 'w') as file:
-            file.write(output)
-
-        print(f'Output saved in {output_path} succesfully!')
-
-    def export_contours_h5(self):
         output_index = 1
 
         Path(f"{self.config['output_path']}").mkdir(parents=True, exist_ok=True)
 
-        while os.path.exists(f"{self.config['output_image']}/cnt_{output_index}.h5"):
+        while os.path.exists(f"{self.config['output_path']}/cnt_{output_index}.h5"):
             output_index += 1
 
         path = f"{self.config['output_path']}/cnt_{output_index}.h5"
 
         h5file = h5py.File(f"{path}", "w")
-        img_group = h5file.create_group('img')
+
+        img_group = h5file.create_group("img")
+
+        img_group.create_dataset("img", data=np.array(cv2.imread(str(self.config["test_image"]), 1)))
+
+        key = 0
+        for item in range(len(self.contour_collection.items)):
+            obj = self.contour_collection.items[item]
+
+            if len(obj.points_navigation_window) != 0:
+                contour = obj.navigation_window_contour
+                img_group.create_dataset(f"cnt_{key}", data=np.array(contour))
+                key += 1
+
+        h5file.close()
 
     def initialize_queue(self):
         self.shared_queue = queue.Queue()
