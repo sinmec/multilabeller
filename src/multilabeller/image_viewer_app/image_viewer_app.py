@@ -94,32 +94,6 @@ class ImageViewerApp:
         self.export_button = tk.Button(self.root_window, text="Export Contours", command=self.export_contours)
         self.export_button.pack()
 
-    # def export_contours(self):
-    #     output = 'Contour_type; points_x; points_y'
-    #     output_index = 0
-    #
-    #     Path(f"{self.config['output_path']}").mkdir(parents=True, exist_ok=True)
-    #
-    #     while os.path.exists(f"{self.config['output_path']}/cnt_{output_index}.txt"):
-    #         output_index += 1
-    #
-    #     output_path = f"{self.config['output_path']}/cnt_{output_index}.txt"
-    #
-    #     for item in range(len(self.contour_collection.items)):
-    #         obj = self.contour_collection.items[item]
-    #
-    #         if len(obj.points_navigation_window) != 0:
-    #             x = obj.navigation_window_contour[:, 0, 0]
-    #             y = obj.navigation_window_contour[:, 0, 1]
-    #             output += f'\n{obj.__class__.__name__}; {x}; {y}'
-    #
-    #     print('Started output saving.')
-    #
-    #     with open(output_path, 'w') as file:
-    #         file.write(output)
-    #
-    #     print(f'Output saved in {output_path} succesfully!')
-
     def export_contours(self):
         print('Started contours exporting...')
         output_index = 0
