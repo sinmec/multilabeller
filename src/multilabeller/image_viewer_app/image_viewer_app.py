@@ -3,6 +3,7 @@ import queue
 import threading
 import time
 import tkinter as tk
+from tkinter import filedialog
 import h5py
 from pathlib import Path
 
@@ -27,6 +28,8 @@ if os.name == "posix":
 
 class ImageViewerApp:
     def __init__(self, root, contour_collection):
+        self.file_path = None
+        self.load_file_button = None
         self.contour_collection = contour_collection
 
         self.root_window = root
@@ -92,6 +95,8 @@ class ImageViewerApp:
         self.root_window.title(self.config["root_window"]["name"])
         self.root_window.geometry("200x50")
         self.export_button = tk.Button(self.root_window, text="Export Contours", command=self.export_contours)
+        self.load_file_button = tk.Button(self.root_window, text="Open image", command=self.open_image)
+        self.load_file_button.pack()
         self.export_button.pack()
 
     def export_contours(self):
@@ -127,8 +132,19 @@ class ImageViewerApp:
     def initialize_queue(self):
         self.shared_queue = queue.Queue()
 
+    def open_directory(self):
+        while True:
+            self.file_path = filedialog.askopenfilename()
+            if self.file_path[-4:] == ".jpg" or self.file_path[-4:] == ".png" or self.file_path[-5:] == ".jpeg":
+                self.start()
+                break
+            else:
+                print(self.file_path)
+                print(self.file_path[-4:])
+                print('Please choose a valid jpg or png file!')
+
     def load_image_from_file(self):
-        file_path = Path(self.config["test_image"])
+        file_path = Path(self.file_path)
         image = cv2.imread(str(file_path), 1)
 
         self.image_manipulator = ImageManipulator(image, self.config)
