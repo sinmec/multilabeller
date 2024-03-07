@@ -28,6 +28,10 @@ if os.name == "posix":
 
 class ImageViewerApp:
     def __init__(self, root, contour_collection):
+        self.previous_img_button = None
+        self.next_img_button = None
+        self.file_index = 0
+        self.folder_path = None
         self.file_path = None
         self.load_file_button = None
         self.contour_collection = contour_collection
@@ -93,11 +97,40 @@ class ImageViewerApp:
 
     def initialize_main_window(self):
         self.root_window.title(self.config["root_window"]["name"])
-        self.root_window.geometry("200x50")
-        self.export_button = tk.Button(self.root_window, text="Export Contours", command=self.export_contours)
-        self.load_file_button = tk.Button(self.root_window, text="Open image", command=self.open_image)
-        self.load_file_button.pack()
-        self.export_button.pack()
+        self.root_window.geometry("260x140")
+
+        load_file_button = tk.Button(self.root_window, text="Open images directory", command=self.open_directory)
+        load_file_button.pack()
+
+    def initialize_buttons(self):
+        export_button = tk.Button(self.root_window, text="Export Contours", command=self.export_contours)
+
+        frame_arrows = tk.Frame(self.root_window)
+        frame_arrows.pack(pady=10)
+
+        next_img_button = tk.Button(frame_arrows, text="Next image >", command=self.next_image_button)
+        previous_img_button = tk.Button(frame_arrows, text="< Previous image", command=self.previous_image_button)
+
+        previous_img_button.pack(side=tk.LEFT, padx=5, pady=10)
+        next_img_button.pack(side=tk.LEFT, padx=5, pady=10)
+
+        frame_arrows.place(relx=0.5, rely=0.5, anchor=tk.N)
+
+        export_button.pack()
+
+    def next_image_button(self):
+        if self.file_index != len(self.file_path_list):
+            self.file_index += 1
+        else:
+            self.file_index = 0
+        self.select_image()
+
+    def previous_image_button(self):
+        if self.file_index != 0:
+            self.file_index -= 1
+        else:
+            self.file_index = len(self.file_path_list)
+        self.select_image()
 
     def export_contours(self):
         print('Started contours exporting...')
@@ -132,22 +165,38 @@ class ImageViewerApp:
     def initialize_queue(self):
         self.shared_queue = queue.Queue()
 
-    def open_image(self):
+    def open_directory(self):
         while True:
-            self.file_path = filedialog.askopenfilename()
-            if self.file_path[-4:] == ".jpg" or self.file_path[-4:] == ".png" or self.file_path[-5:] == ".jpeg":
-                self.start()
+            self.folder_path = Path(filedialog.askdirectory())
+            if self.folder_path:
+                self.choose_images()
                 break
             else:
-                print(self.file_path)
-                print(self.file_path[-4:])
-                print('Please choose a valid jpg or png file!')
+                print('Please select a valid folder.')
 
-    def load_image_from_file(self):
-        file_path = Path(self.file_path)
+    def choose_images(self):
+        self.file_path_list = []
+        for file in self.folder_path.iterdir():
+            self.file_path_list.append(file)
+
+        self.select_image()
+        self.initialize_buttons()
+
+    def select_image(self):
+        self.load_image_from_file(self.file_path_list[self.file_index])
+
+    def load_image_from_file(self, img_path):
+        file_path = Path(img_path)
         image = cv2.imread(str(file_path), 1)
 
+        if self.annotation_window or self.navigation_window:
+            if self.annotation_window.winfo_exists() or self.navigation_window.winfo_exists():
+                self.annotation_window.destroy()
+                self.navigation_window.destroy()
+
         self.image_manipulator = ImageManipulator(image, self.config)
+
+        self.start()
 
     def create_annotation_window_text(self):
         text = ""
@@ -519,10 +568,10 @@ class ImageViewerApp:
                 )
 
     def start(self):
-        self.load_image_from_file()
+        #self.load_image_from_file()
         self.initialize_windows()
-        thread1 = threading.Thread(target=self.annotation_window.run)
         thread2 = threading.Thread(target=self.navigation_window.run)
+        thread1 = threading.Thread(target=self.annotation_window.run)
         thread1.start()
         thread2.start()
 
