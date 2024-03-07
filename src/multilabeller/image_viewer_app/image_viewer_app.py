@@ -132,7 +132,7 @@ class ImageViewerApp:
     def initialize_queue(self):
         self.shared_queue = queue.Queue()
 
-    def open_directory(self):
+    def open_image(self):
         while True:
             self.file_path = filedialog.askopenfilename()
             if self.file_path[-4:] == ".jpg" or self.file_path[-4:] == ".png" or self.file_path[-5:] == ".jpeg":
