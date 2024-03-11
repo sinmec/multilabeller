@@ -3,6 +3,7 @@ import queue
 import threading
 import time
 import tkinter as tk
+from datetime import datetime
 from tkinter import filedialog
 import h5py
 from pathlib import Path
@@ -31,7 +32,7 @@ class ImageViewerApp:
         self.previous_img_button = None
         self.next_img_button = None
         self.file_index = 0
-        self.folder_path = None
+        self.image_files_path = None
         self.file_path = None
         self.load_file_button = None
         self.contour_collection = contour_collection
@@ -119,7 +120,7 @@ class ImageViewerApp:
         export_button.pack()
 
     def next_image_button(self):
-        if self.file_index != len(self.file_path_list):
+        if self.file_index != len(self.image_files):
             self.file_index += 1
         else:
             self.file_index = 0
@@ -129,61 +130,70 @@ class ImageViewerApp:
         if self.file_index != 0:
             self.file_index -= 1
         else:
-            self.file_index = len(self.file_path_list)
+            self.file_index = len(self.image_files)
         self.select_image()
 
     def export_contours(self):
         print('Started contours exporting...')
-        output_index = 0
 
-        Path(f"{self.config['output_path']}").mkdir(parents=True, exist_ok=True)
+        output_path = Path(f"{self.config['output_path']}")
+        output_path.mkdir(parents=True, exist_ok=True)
 
-        while os.path.exists(f"{self.config['output_path']}/cnt_{output_index}.h5"):
-            output_index += 1
+        current_datetime = datetime.now()
+        h5_file_name_prefix = current_datetime.strftime('%Y_%m_%d_%H_%M')
+        h5_file_name = f'{h5_file_name_prefix}_{self.image_files_path.stem}.h5'
 
-        path = f"{self.config['output_path']}/cnt_{output_index}.h5"
+        h5_file = h5py.File(Path(output_path,h5_file_name), "w")
 
-        h5file = h5py.File(f"{path}", "w")
+        current_image = self.image_files[self.file_index]
+        img_group = h5_file.create_group(f'{current_image.name}')
+        img_group.create_dataset("img", data=np.array(cv2.imread(str(current_image), 1)))
 
-        img_group = h5file.create_group("img")
-        contour_group = h5file.create_group("contours")
-        img_group.create_dataset("img", data=np.array(cv2.imread(str(self.config["test_image"]), 1)))
+        contours_group = img_group.create_group('contours')
 
         key = 0
         for item in range(len(self.contour_collection.items)):
-            obj = self.contour_collection.items[item]
+            contour = self.contour_collection.items[item]
+            if not contour.valid:
+                continue
+            if contour.navigation_window_contour is None:
+                continue
+            cv2_contours = contour.navigation_window_contour
+            contours_group.create_dataset(f"cnt_{key:06d}", data=np.array(cv2_contours))
+            key += 1
 
-            if len(obj.points_navigation_window) != 0:
-                contour = obj.navigation_window_contour
-                contour_group.create_dataset(f"cnt_{key}", data=np.array(contour))
-                key += 1
+        h5_file.close()
 
-        h5file.close()
-
-        print(f'A total of {key} contours exported succesfully at {path}')
+        print(f'A total of {key} contours exported succesfully at {output_path}')
 
     def initialize_queue(self):
         self.shared_queue = queue.Queue()
 
     def open_directory(self):
         while True:
-            self.folder_path = Path(filedialog.askdirectory())
-            if self.folder_path:
+            self.image_files_path = Path(filedialog.askdirectory())
+            if self.image_files_path:
                 self.choose_images()
                 break
             else:
                 print('Please select a valid folder.')
 
     def choose_images(self):
-        self.file_path_list = []
-        for file in self.folder_path.iterdir():
-            self.file_path_list.append(file)
+        self.image_files = []
+        for file in self.image_files_path.iterdir():
+            IMAGE_FILE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.TIFF']
+            if not file.suffix in IMAGE_FILE_EXTENSIONS:
+                continue
+            self.image_files.append(file)
+        if len(self.image_files) == 0:
+            print('Please select a valid folder')
+            exit() # TODO: How do we kill the program?
 
         self.select_image()
         self.initialize_buttons()
 
     def select_image(self):
-        self.load_image_from_file(self.file_path_list[self.file_index])
+        self.load_image_from_file(self.image_files[self.file_index])
 
     def load_image_from_file(self, img_path):
         file_path = Path(img_path)
@@ -568,7 +578,6 @@ class ImageViewerApp:
                 )
 
     def start(self):
-        #self.load_image_from_file()
         self.initialize_windows()
         thread2 = threading.Thread(target=self.navigation_window.run)
         thread1 = threading.Thread(target=self.annotation_window.run)
