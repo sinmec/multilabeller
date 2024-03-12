@@ -280,7 +280,17 @@ class ImageViewerApp:
 
         self.image_manipulator = ImageManipulator(image, self.config)
 
+        self.reinitialize_context()
+
         self.start()
+
+    def reinitialize_context(self):
+        self.contour_collection.items = []
+        self.annotation_objects = []
+        self.current_drawed_contour = None
+        self.current_circle = None
+        self.current_ellipse = None
+
 
     def create_annotation_window_text(self):
         text = ""

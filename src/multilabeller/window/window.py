@@ -105,14 +105,16 @@ class Window(tk.Toplevel):
                             )
 
             elif annotation_object.finished:
-
-                cv2.drawContours(
-                    image_copy,
-                    [annotation_object.annotation_window_contour],
-                    -1,
-                    annotation_object.color,
-                    annotation_object.thickness,
-                )
+                try:
+                    cv2.drawContours(
+                        image_copy,
+                        [annotation_object.annotation_window_contour],
+                        -1,
+                        annotation_object.color,
+                        annotation_object.thickness,
+                    )
+                except: #TODO: Why we are having this strange errors?
+                    pass
 
         self.image_manipulator.annotation_image = image_copy
 
