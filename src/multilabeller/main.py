@@ -6,5 +6,4 @@ from src.multilabeller.contour_collection import ContourCollection
 root = tk.Tk()
 contour_collection = ContourCollection()
 app = ImageViewerApp(root, contour_collection)
-# app.start()
 app.run()

@@ -105,6 +105,7 @@ class Window(tk.Toplevel):
                             )
 
             elif annotation_object.finished:
+
                 cv2.drawContours(
                     image_copy,
                     [annotation_object.annotation_window_contour],

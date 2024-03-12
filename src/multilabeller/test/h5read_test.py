@@ -3,7 +3,7 @@ import h5py
 from pathlib import Path
 
 # Path to .h5 file - Modify it accordingly
-h5_file = Path(r"output/2024_03_11_09_11_aiaiaia.h5")
+h5_file = Path(r"output/aiaiaia.h5")
 
 # Reading the .h5 file
 h5_dataset = h5py.File(h5_file, 'r')

@@ -35,7 +35,9 @@ class ImageViewerApp:
         self.image_files_path = None
         self.file_path = None
         self.load_file_button = None
+        self.number_of_exports = 0
         self.contour_collection = contour_collection
+        self.output_path = None
 
         self.root_window = root
         self.export_button = None
@@ -100,17 +102,25 @@ class ImageViewerApp:
         self.root_window.title(self.config["root_window"]["name"])
         self.root_window.geometry("260x140")
 
-        load_file_button = tk.Button(self.root_window, text="Open images directory", command=self.open_directory)
+        load_file_button = tk.Button(
+            self.root_window, text="Open images directory", command=self.open_directory
+        )
         load_file_button.pack()
 
     def initialize_buttons(self):
-        export_button = tk.Button(self.root_window, text="Export Contours", command=self.export_contours)
+        export_button = tk.Button(
+            self.root_window, text="Export Contours", command=self.export_contours
+        )
 
         frame_arrows = tk.Frame(self.root_window)
         frame_arrows.pack(pady=10)
 
-        next_img_button = tk.Button(frame_arrows, text="Next image >", command=self.next_image_button)
-        previous_img_button = tk.Button(frame_arrows, text="< Previous image", command=self.previous_image_button)
+        next_img_button = tk.Button(
+            frame_arrows, text="Next image >", command=self.next_image_button
+        )
+        previous_img_button = tk.Button(
+            frame_arrows, text="< Previous image", command=self.previous_image_button
+        )
 
         previous_img_button.pack(side=tk.LEFT, padx=5, pady=10)
         next_img_button.pack(side=tk.LEFT, padx=5, pady=10)
@@ -133,25 +143,45 @@ class ImageViewerApp:
             self.file_index = len(self.image_files)
         self.select_image()
 
+    def copy_h5_contents(self, src_path, dest_path):
+        with h5py.File(src_path, "r") as src_file:
+            with h5py.File(dest_path, "w") as dest_file:
+                for item in src_file.keys():
+                    src_file.copy(item, dest_file)
+
     def export_contours(self):
-        print('Started contours exporting...')
+        print("Started contours exporting...")
 
-        output_path = Path(f"{self.config['output_path']}")
-        output_path.mkdir(parents=True, exist_ok=True)
+        image_folder_name = self.image_files_path.stem
 
-        current_datetime = datetime.now()
-        h5_file_name_prefix = current_datetime.strftime('%Y_%m_%d_%H_%M')
-        h5_file_name = f'{h5_file_name_prefix}_{self.image_files_path.stem}.h5'
+        self.output_path = Path(f"{self.config['output_path']}", image_folder_name)
+        self.output_path.mkdir(parents=True, exist_ok=True)
 
-        h5_file = h5py.File(Path(output_path,h5_file_name), "w")
+        if self.number_of_exports == 0:
+            N_h5_files = 0
+            for _file in self.output_path.iterdir():
+                if not str(_file).endswith('.h5'):
+                    continue
+                if not image_folder_name in str(_file):
+                    continue
+
+                N_h5_files += 1
+            self.number_of_exports += N_h5_files
+
+        h5_file_name = f"{image_folder_name}_{self.number_of_exports:06d}.h5"
+        h5_file_path = Path(self.output_path, h5_file_name)
+
+        h5_file = h5py.File(h5_file_path, "w")
+        h5_file.attrs['date'] = datetime.now().strftime('%Y_%m_%d_%H_%M')
 
         current_image = self.image_files[self.file_index]
-        img_group = h5_file.create_group(f'{current_image.name}')
-        img_group.create_dataset("img", data=np.array(cv2.imread(str(current_image), 1)))
+        img_group = h5_file.create_group(f"{current_image.name}")
+        img_group.create_dataset(
+            "img", data=np.array(cv2.imread(str(current_image), 1))
+        )
+        contours_group = img_group.create_group("contours")
 
-        contours_group = img_group.create_group('contours')
-
-        key = 0
+        n_contours = 0
         for item in range(len(self.contour_collection.items)):
             contour = self.contour_collection.items[item]
             if not contour.valid:
@@ -159,12 +189,52 @@ class ImageViewerApp:
             if contour.navigation_window_contour is None:
                 continue
             cv2_contours = contour.navigation_window_contour
-            contours_group.create_dataset(f"cnt_{key:06d}", data=np.array(cv2_contours))
-            key += 1
+            contours_group.create_dataset(f"cnt_{n_contours:06d}", data=np.array(cv2_contours))
+            n_contours += 1
 
         h5_file.close()
 
-        print(f'A total of {key} contours exported succesfully at {output_path}')
+
+        self.number_of_exports += 1
+        self.merge_exported_files()
+
+        print(f"A total of {n_contours} contours from {current_image} successfully exported to {self.output_path}")
+
+    def merge_exported_files(self):
+
+        image_folder_name = self.image_files_path.stem
+        output_path = Path(f"{self.config['output_path']}")
+
+        h5_file_name = f"{image_folder_name}.h5"
+        h5_file_path = Path(output_path, h5_file_name)
+
+        h5_file = h5py.File(h5_file_path, "w")
+        h5_file.attrs['date'] = datetime.now().strftime('%Y_%m_%d_%H_%M')
+
+        # 1. merge images
+        n_contours = 0
+        for _file in self.output_path.iterdir():
+            tpm_h5_file = h5py.File(_file, "r")
+            for _img in tpm_h5_file.keys():
+                if not _img in h5_file:
+                    img_group = h5_file.create_group(f"{_img}")
+                    img_group.create_dataset(
+                        "img", data=np.array(tpm_h5_file[_img]['img'][...], dtype=np.uint8)
+                    )
+
+                    # TODO: Check if it's necessary
+                    if not 'contours' in img_group.keys():
+                        contours_group = img_group.create_group("contours")
+
+                contours_group = h5_file[_img]['contours']
+                for cnt in tpm_h5_file[_img]['contours']:
+                    contour = tpm_h5_file[_img]['contours'][cnt][...]
+                    contours_group.create_dataset(f"cnt_{n_contours:06d}", data=contour)
+                    n_contours += 1
+
+            tpm_h5_file.close()
+
+        h5_file.close()
 
     def initialize_queue(self):
         self.shared_queue = queue.Queue()
@@ -176,18 +246,19 @@ class ImageViewerApp:
                 self.choose_images()
                 break
             else:
-                print('Please select a valid folder.')
+                print("Please select a valid folder.")
 
     def choose_images(self):
         self.image_files = []
         for file in self.image_files_path.iterdir():
-            IMAGE_FILE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.TIFF']
+            IMAGE_FILE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".TIFF"]
             if not file.suffix in IMAGE_FILE_EXTENSIONS:
                 continue
             self.image_files.append(file)
+        self.image_files.sort()
         if len(self.image_files) == 0:
-            print('Please select a valid folder')
-            exit() # TODO: How do we kill the program?
+            print("Please select a valid folder")
+            exit()  # TODO: How do we kill the program?
 
         self.select_image()
         self.initialize_buttons()
@@ -200,7 +271,10 @@ class ImageViewerApp:
         image = cv2.imread(str(file_path), 1)
 
         if self.annotation_window or self.navigation_window:
-            if self.annotation_window.winfo_exists() or self.navigation_window.winfo_exists():
+            if (
+                self.annotation_window.winfo_exists()
+                or self.navigation_window.winfo_exists()
+            ):
                 self.annotation_window.destroy()
                 self.navigation_window.destroy()
 
