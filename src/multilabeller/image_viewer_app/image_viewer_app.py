@@ -50,8 +50,9 @@ class ImageViewerApp:
         self.selector = Selector()
         self.read_config_file()
         self.initialize_SAM()
-        self.initialize_main_window()
+
         self.initialize_queue()
+        self.initialize_main_window()
 
         self.operation_mode = None
 
@@ -113,11 +114,15 @@ class ImageViewerApp:
     def initialize_main_window(self):
         self.root_window.title(self.config["root_window"]["name"])
         self.root_window.geometry("260x140")
+        file_index = self.load_file_index_file("file_index.yml")
 
-        load_file_button = tk.Button(
-            self.root_window, text="Open images directory", command=self.open_directory
-        )
-        load_file_button.pack()
+        if file_index["program_running"]:
+            self.open_directory()
+        else:
+            load_file_button = tk.Button(
+                self.root_window, text="Open images directory", command=self.open_directory
+            )
+            load_file_button.pack()
 
     def initialize_buttons(self):
         export_button = tk.Button(
@@ -166,6 +171,9 @@ class ImageViewerApp:
         self.reset_program()
 
     def reset_program(self):
+        file_index = self.load_file_index_file("file_index.yml")
+        file_index["program_running"] = True
+        self.save_file_index("file_index.yml", file_index)
         self.stop()
         os.system('python main.py')
 
@@ -266,13 +274,23 @@ class ImageViewerApp:
         self.shared_queue = queue.Queue()
 
     def open_directory(self):
-        while True:
-            self.image_files_path = Path(filedialog.askdirectory())
-            if self.image_files_path:
-                self.choose_images()
-                break
-            else:
-                print("Please select a valid folder.")
+        file_index = self.load_file_index_file("file_index.yml")
+
+        if not file_index["program_running"]:
+            while True:
+                self.image_files_path = Path(filedialog.askdirectory())
+                file_index["current_path"] = str(self.image_files_path)
+
+                self.save_file_index("file_index.yml", file_index)
+
+                if self.image_files_path:
+                    self.choose_images()
+                    break
+                else:
+                    print("Please select a valid folder.")
+        else:
+            self.image_files_path = Path(f'{file_index["current_path"]}')
+            self.choose_images()
 
     def choose_images(self):
         self.image_files = []
@@ -291,8 +309,7 @@ class ImageViewerApp:
 
     def select_image(self):
         file_index = self.load_file_index_file("file_index.yml")
-        print(file_index)
-
+        print(f"Initializing {file_index['file_index'] + 1}° image")
         self.load_image_from_file(self.image_files[file_index["file_index"]])
 
     def load_image_from_file(self, img_path):
