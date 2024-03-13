@@ -2,6 +2,8 @@ test_image: "test/data/out_000001.jpg"
 
 output_path: "test/output"
 
+file_index: 0
+
 root_window:
   name: "Main Window"
 
