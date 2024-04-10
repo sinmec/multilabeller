@@ -1,6 +1,7 @@
 test_image: "test/data/out_000001.jpg"
 
 output_path: "test/output"
+#output_path: "C:\\Users\\XXXXX\\YYYYYY" Windows example
 
 root_window:
   name: "Main Window"
