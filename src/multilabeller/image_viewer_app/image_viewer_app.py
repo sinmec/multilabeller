@@ -3,9 +3,13 @@ import queue
 import threading
 import time
 import tkinter as tk
+from datetime import datetime
+from tkinter import filedialog
+import h5py
 from pathlib import Path
 
 import cv2
+import numpy as np
 import torch
 import yaml
 
@@ -25,9 +29,18 @@ if os.name == "posix":
 
 class ImageViewerApp:
     def __init__(self, root, contour_collection):
+        self.previous_img_button = None
+        self.next_img_button = None
+        self.file_index = 0
+        self.image_files_path = None
+        self.file_path = None
+        self.load_file_button = None
+        self.number_of_exports = 0
         self.contour_collection = contour_collection
+        self.output_path = None
 
         self.root_window = root
+        self.export_button = None
         self.image_manipulator = None
         self.config = None
         self.navigation_window = None
@@ -87,15 +100,197 @@ class ImageViewerApp:
 
     def initialize_main_window(self):
         self.root_window.title(self.config["root_window"]["name"])
+        self.root_window.geometry("260x140")
+
+        load_file_button = tk.Button(
+            self.root_window, text="Open images directory", command=self.open_directory
+        )
+        load_file_button.pack()
+
+    def initialize_buttons(self):
+        export_button = tk.Button(
+            self.root_window, text="Export Contours", command=self.export_contours
+        )
+
+        frame_arrows = tk.Frame(self.root_window)
+        frame_arrows.pack(pady=10)
+
+        next_img_button = tk.Button(
+            frame_arrows, text="Next image >", command=self.next_image_button
+        )
+        previous_img_button = tk.Button(
+            frame_arrows, text="< Previous image", command=self.previous_image_button
+        )
+
+        previous_img_button.pack(side=tk.LEFT, padx=5, pady=10)
+        next_img_button.pack(side=tk.LEFT, padx=5, pady=10)
+
+        frame_arrows.place(relx=0.5, rely=0.5, anchor=tk.N)
+
+        export_button.pack()
+
+    def next_image_button(self):
+        if self.file_index != len(self.image_files):
+            self.file_index += 1
+        else:
+            self.file_index = 0
+        self.select_image()
+
+    def previous_image_button(self):
+        if self.file_index != 0:
+            self.file_index -= 1
+        else:
+            self.file_index = len(self.image_files)
+        self.select_image()
+
+    def copy_h5_contents(self, src_path, dest_path):
+        with h5py.File(src_path, "r") as src_file:
+            with h5py.File(dest_path, "w") as dest_file:
+                for item in src_file.keys():
+                    src_file.copy(item, dest_file)
+
+    def export_contours(self):
+        print("Started contours exporting...")
+
+        image_folder_name = self.image_files_path.stem
+
+        self.output_path = Path(f"{self.config['output_path']}", image_folder_name)
+        self.output_path.mkdir(parents=True, exist_ok=True)
+
+        if self.number_of_exports == 0:
+            N_h5_files = 0
+            for _file in self.output_path.iterdir():
+                if not str(_file).endswith('.h5'):
+                    continue
+                if not image_folder_name in str(_file):
+                    continue
+
+                N_h5_files += 1
+            self.number_of_exports += N_h5_files
+
+        h5_file_name = f"{image_folder_name}_{self.number_of_exports:06d}.h5"
+        h5_file_path = Path(self.output_path, h5_file_name)
+
+        h5_file = h5py.File(h5_file_path, "w")
+        h5_file.attrs['date'] = datetime.now().strftime('%Y_%m_%d_%H_%M')
+
+        current_image = self.image_files[self.file_index]
+        img_group = h5_file.create_group(f"{current_image.name}")
+        img_group.create_dataset(
+            "img", data=np.array(cv2.imread(str(current_image), 1))
+        )
+        contours_group = img_group.create_group("contours")
+
+        n_contours = 0
+        for item in range(len(self.contour_collection.items)):
+            contour = self.contour_collection.items[item]
+            if not contour.valid:
+                continue
+            if contour.navigation_window_contour is None:
+                continue
+            cv2_contours = contour.navigation_window_contour
+            contours_group.create_dataset(f"cnt_{n_contours:06d}", data=np.array(cv2_contours))
+            n_contours += 1
+
+        h5_file.close()
+
+
+        self.number_of_exports += 1
+        self.merge_exported_files()
+
+        print(f"A total of {n_contours} contours from {current_image} successfully exported to {self.output_path}")
+
+    def merge_exported_files(self):
+
+        image_folder_name = self.image_files_path.stem
+        output_path = Path(f"{self.config['output_path']}")
+
+        h5_file_name = f"{image_folder_name}.h5"
+        h5_file_path = Path(output_path, h5_file_name)
+
+        h5_file = h5py.File(h5_file_path, "w")
+        h5_file.attrs['date'] = datetime.now().strftime('%Y_%m_%d_%H_%M')
+
+        # 1. merge images
+        n_contours = 0
+        for _file in self.output_path.iterdir():
+            tpm_h5_file = h5py.File(_file, "r")
+            for _img in tpm_h5_file.keys():
+                if not _img in h5_file:
+                    img_group = h5_file.create_group(f"{_img}")
+                    img_group.create_dataset(
+                        "img", data=np.array(tpm_h5_file[_img]['img'][...], dtype=np.uint8)
+                    )
+
+                    # TODO: Check if it's necessary
+                    if not 'contours' in img_group.keys():
+                        contours_group = img_group.create_group("contours")
+
+                contours_group = h5_file[_img]['contours']
+                for cnt in tpm_h5_file[_img]['contours']:
+                    contour = tpm_h5_file[_img]['contours'][cnt][...]
+                    contours_group.create_dataset(f"cnt_{n_contours:06d}", data=contour)
+                    n_contours += 1
+
+            tpm_h5_file.close()
+
+        h5_file.close()
 
     def initialize_queue(self):
         self.shared_queue = queue.Queue()
 
-    def load_image_from_file(self):
-        file_path = Path(self.config["test_image"])
+    def open_directory(self):
+        while True:
+            self.image_files_path = Path(filedialog.askdirectory())
+            if self.image_files_path:
+                self.choose_images()
+                break
+            else:
+                print("Please select a valid folder.")
+
+    def choose_images(self):
+        self.image_files = []
+        for file in self.image_files_path.iterdir():
+            IMAGE_FILE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".TIFF"]
+            if not file.suffix in IMAGE_FILE_EXTENSIONS:
+                continue
+            self.image_files.append(file)
+        self.image_files.sort()
+        if len(self.image_files) == 0:
+            print("Please select a valid folder")
+            exit()  # TODO: How do we kill the program?
+
+        self.select_image()
+        self.initialize_buttons()
+
+    def select_image(self):
+        self.load_image_from_file(self.image_files[self.file_index])
+
+    def load_image_from_file(self, img_path):
+        file_path = Path(img_path)
         image = cv2.imread(str(file_path), 1)
 
+        if self.annotation_window or self.navigation_window:
+            if (
+                self.annotation_window.winfo_exists()
+                or self.navigation_window.winfo_exists()
+            ):
+                self.annotation_window.destroy()
+                self.navigation_window.destroy()
+
         self.image_manipulator = ImageManipulator(image, self.config)
+
+        self.reinitialize_context()
+
+        self.start()
+
+    def reinitialize_context(self):
+        self.contour_collection.items = []
+        self.annotation_objects = []
+        self.current_drawed_contour = None
+        self.current_circle = None
+        self.current_ellipse = None
+
 
     def create_annotation_window_text(self):
         text = ""
@@ -257,7 +452,6 @@ class ImageViewerApp:
 
             while True:
                 self.annotation_window.display_annotation_image()
-
                 self.annotation_window.canvas.bind(
                     self.config["mouse_motion"][os_option],
                     self.annotation_window.get_mouse_position,
@@ -468,10 +662,9 @@ class ImageViewerApp:
                 )
 
     def start(self):
-        self.load_image_from_file()
         self.initialize_windows()
-        thread1 = threading.Thread(target=self.annotation_window.run)
         thread2 = threading.Thread(target=self.navigation_window.run)
+        thread1 = threading.Thread(target=self.annotation_window.run)
         thread1.start()
         thread2.start()
 

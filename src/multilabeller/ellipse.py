@@ -123,14 +123,14 @@ class Ellipse(Contour):
         return int(major_axis)
 
     def calculate_minor_axis(self, points):
-        x_1 = points[1][0]
-        x_2 = points[2][0]
-        y_1 = points[1][1]
-        y_2 = points[2][1]
+        x_1 = points[2][0]
+        x_2 = points[3][0]
+        y_1 = points[2][1]
+        y_2 = points[3][1]
         dx = x_2 - x_1
         dy = y_2 - y_1
-        major_axis = 0.5 * np.sqrt(dx**2.0 + dy**2.0)
-        return int(major_axis)
+        minor_axis = 0.5 * np.sqrt(dx**2.0 + dy**2.0)
+        return int(minor_axis)
 
     def calculate_angle(self, points):
         x_1 = points[0][0]
