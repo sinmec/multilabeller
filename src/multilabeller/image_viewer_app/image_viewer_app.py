@@ -1,5 +1,6 @@
 import os
 import queue
+import sys
 import threading
 import time
 import tkinter as tk
@@ -31,7 +32,6 @@ class ImageViewerApp:
     def __init__(self, root, contour_collection):
         self.previous_img_button = None
         self.next_img_button = None
-        self.file_index = 0
         self.image_files_path = None
         self.file_path = None
         self.load_file_button = None
@@ -43,14 +43,16 @@ class ImageViewerApp:
         self.export_button = None
         self.image_manipulator = None
         self.config = None
+        self.file_index = None
         self.navigation_window = None
         self.annotation_window = None
 
         self.selector = Selector()
         self.read_config_file()
         self.initialize_SAM()
-        self.initialize_main_window()
+
         self.initialize_queue()
+        self.initialize_main_window()
 
         self.operation_mode = None
 
@@ -98,14 +100,29 @@ class ImageViewerApp:
         except FileExistsError:
             print("Configuration file 'config.yml' was not found.")
 
+    def load_file_index_file(self, file_path):
+        try:
+            with open(file_path, "r") as file:
+                return yaml.safe_load(file)
+        except FileExistsError:
+            print("Configuration file 'file_index.yml' was not found.")
+
+    def save_file_index(self, file_path, data):
+        with open(file_path, 'w') as file:
+            yaml.dump(data, file)
+
     def initialize_main_window(self):
         self.root_window.title(self.config["root_window"]["name"])
         self.root_window.geometry("260x140")
+        file_index = self.load_file_index_file("file_index.yml")
 
-        load_file_button = tk.Button(
-            self.root_window, text="Open images directory", command=self.open_directory
-        )
-        load_file_button.pack()
+        if file_index["program_running"]:
+            self.open_directory()
+        else:
+            load_file_button = tk.Button(
+                self.root_window, text="Open images directory", command=self.open_directory
+            )
+            load_file_button.pack()
 
     def initialize_buttons(self):
         export_button = tk.Button(
@@ -130,18 +147,35 @@ class ImageViewerApp:
         export_button.pack()
 
     def next_image_button(self):
-        if self.file_index != len(self.image_files):
-            self.file_index += 1
+        file_index = self.load_file_index_file("file_index.yml")
+
+        if file_index["file_index"] != len(self.image_files):
+            file_index["file_index"] += 1
         else:
-            self.file_index = 0
-        self.select_image()
+            file_index["file_index"] = 0
+
+        self.save_file_index("file_index.yml", file_index)
+
+        self.reset_program()
 
     def previous_image_button(self):
-        if self.file_index != 0:
-            self.file_index -= 1
+        file_index = self.load_file_index_file("file_index.yml")
+
+        if file_index["file_index"] != 0:
+            file_index["file_index"] -= 1
         else:
-            self.file_index = len(self.image_files)
-        self.select_image()
+            file_index["file_index"] = len(self.image_files)
+
+        self.save_file_index("file_index.yml", file_index)
+
+        self.reset_program()
+
+    def reset_program(self):
+        file_index = self.load_file_index_file("file_index.yml")
+        file_index["program_running"] = True
+        self.save_file_index("file_index.yml", file_index)
+        self.stop()
+        os.system('python main.py')
 
     def copy_h5_contents(self, src_path, dest_path):
         with h5py.File(src_path, "r") as src_file:
@@ -240,13 +274,23 @@ class ImageViewerApp:
         self.shared_queue = queue.Queue()
 
     def open_directory(self):
-        while True:
-            self.image_files_path = Path(filedialog.askdirectory())
-            if self.image_files_path:
-                self.choose_images()
-                break
-            else:
-                print("Please select a valid folder.")
+        file_index = self.load_file_index_file("file_index.yml")
+
+        if not file_index["program_running"]:
+            while True:
+                self.image_files_path = Path(filedialog.askdirectory())
+                file_index["current_path"] = str(self.image_files_path)
+
+                self.save_file_index("file_index.yml", file_index)
+
+                if self.image_files_path:
+                    self.choose_images()
+                    break
+                else:
+                    print("Please select a valid folder.")
+        else:
+            self.image_files_path = Path(f'{file_index["current_path"]}')
+            self.choose_images()
 
     def choose_images(self):
         self.image_files = []
@@ -264,7 +308,9 @@ class ImageViewerApp:
         self.initialize_buttons()
 
     def select_image(self):
-        self.load_image_from_file(self.image_files[self.file_index])
+        file_index = self.load_file_index_file("file_index.yml")
+        print(f"Initializing {file_index['file_index'] + 1}° image")
+        self.load_image_from_file(self.image_files[file_index["file_index"]])
 
     def load_image_from_file(self, img_path):
         file_path = Path(img_path)
@@ -667,6 +713,9 @@ class ImageViewerApp:
         thread1 = threading.Thread(target=self.annotation_window.run)
         thread1.start()
         thread2.start()
+
+    def stop(self):
+        self.root_window.destroy()
 
     def run(self):
         self.root_window.mainloop()
