@@ -11,18 +11,39 @@ h5_dataset = h5py.File(h5_file, 'r')
 # Get images
 image_files = h5_dataset.keys()
 
-# formato do arquivo = ["nome_da_imagem OK", "centro_elipse_x", "centro_elipse_y", "altura_bbox OK",
-#                       "comprimento_bbox OK", "eixo_principal_elipse", "eixo_secundario_elipse", "angulo_elipse"]
-
-# nome do arquivo = {nome_da_image}_contours.txt
+file_name = f'{h5_file.name}_contours.txt'
 
 for image_file in image_files:
+
+    header = "image_name, ellipse_center_x, ellipse_center_y, bbox_height, bbox_width," \
+             " ellipse_main_axis, ellipse_secondary_axis, ellipse_angle"
+    output = []
+
+    file_name = f'img_{image_file}_contours.txt'
+
+    imagem = h5_dataset[image_file]['img']
+
     original_img = h5_dataset[image_file]['img'][...]
     for contour_id in h5_dataset[image_file]['contours']:
         contour = h5_dataset[image_file]['contours'][contour_id]
-        cv2.drawContours(original_img, [contour[...]], -1, [0, 0, 255], 2)
-        x, y, w, h = cv2.boundingRect(contour[...])
-        original_img = cv2.rectangle(original_img, (x, y), (x + w, y + h), (0, 255, 0), 2)
+        if len(contour[...]) >= 5:
+            ((center_x, center_y), (ellipse_width, ellipse_height), ellipse_angle) = cv2.fitEllipse(contour[...])
+            original_img = cv2.ellipse(original_img, (int(center_x), int(center_y)),
+                                       (int(ellipse_width / 2), int(ellipse_height / 2)),
+                                       ellipse_angle, 0, 360, (0, 0, 255), 2)
+        else:
+            break
+
+        bbox_x, bbox_y, bbox_width, bbox_height = cv2.boundingRect(contour[...])
+        original_img = cv2.rectangle(original_img, (bbox_x, bbox_y),
+                                     (bbox_x + bbox_width, bbox_y + bbox_height), (0, 255, 0), 1)
+
+        output.append([f"{image_file}, {center_x:.2f}, {center_y:.2f}, {bbox_height:.2f}, {bbox_width:.2f},"
+                       f" {ellipse_width:.2f}, {ellipse_height:.2f}, {ellipse_angle:.2f}"])
 
     cv2.imwrite(f'cnts_{image_file}', original_img)
 
+    with open(file_name, 'w', encoding='utf-8') as arquivo:
+        arquivo.write(header + '\n')
+        for linha in output:
+            arquivo.write(str(linha)[2:-2] + '\n')
