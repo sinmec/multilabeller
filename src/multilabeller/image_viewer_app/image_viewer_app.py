@@ -610,6 +610,7 @@ class ImageViewerApp:
 
     def auto_segmentation(self):
         print("Applying SAM...")
+        self.SAM.contours = []
         self.SAM.image_manipulator = self.image_manipulator
         self.SAM.apply(self.image_manipulator.annotation_image_buffer.copy())
         print("SAM contour detection finished!")
