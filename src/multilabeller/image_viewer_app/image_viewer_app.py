@@ -418,11 +418,23 @@ class ImageViewerApp:
                 add="+",
             )
 
-            self.annotation_window.bind(
-                self.config["mouse_wheel"][os_option],
-                self.mouse_configure_ellipse_minor_axis_callback,
-                add="+",
-            )
+            if os.name == "nt":
+                self.annotation_window.bind(
+                    "<MouseWheel>",
+                    self.mouse_configure_ellipse_minor_axis_callback,
+                    add="+",
+                )
+            else:
+                self.annotation_window.bind(
+                    self.config["mouse_wheel"]["linux"]["bind1"],
+                    self.mouse_configure_ellipse_minor_axis_callback,
+                    add="+",
+                )
+                self.annotation_window.bind(
+                    self.config["mouse_wheel"]["linux"]["bind2"],
+                    self.mouse_configure_ellipse_minor_axis_callback,
+                    add="+",
+                )
 
             self.annotation_window.bind(
                 self.config["left_mouse_click"][os_option],
