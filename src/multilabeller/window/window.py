@@ -35,6 +35,65 @@ class Window(tk.Toplevel):
 
         self.annotation_mode = False
 
+    def get_mouse_wheel_step_sensibility(self):
+        configured_step = self.config["mouse_wheel"]["step_sensibility"]
+
+        if configured_step != "auto":
+            try:
+                return float(configured_step)
+            except (ValueError, TypeError):
+                print(
+                    f"Invalid mouse_wheel.step_sensibility value: {configured_step}. "
+                    "Using fallback value 1.5."
+                )
+                return 1.5
+
+        if self.image_manipulator is None:
+            return 1.5
+
+        max_image_dimension = max(
+            self.image_manipulator.navigation_image_width,
+            self.image_manipulator.navigation_image_height,
+        )
+
+        return max(0.5, min(max_image_dimension / 1000, 20.0))
+
+    def get_modified_mouse_wheel_step_sensibility(self, event):
+        step_sensibility = self.get_mouse_wheel_step_sensibility()
+
+        ctrl_speed_multiplier = self._get_validated_multiplier(
+            "ctrl_speed_multiplier", 5.0
+        )
+        shift_speed_multiplier = self._get_validated_multiplier(
+            "shift_speed_multiplier", 0.25
+        )
+
+        if self.is_ctrl_pressed(event):
+            step_sensibility *= ctrl_speed_multiplier
+
+        if self.is_shift_pressed(event):
+            step_sensibility *= shift_speed_multiplier
+
+        return step_sensibility
+
+    def _get_validated_multiplier(self, key, default):
+        value = self.config["mouse_wheel"].get(key, default)
+        try:
+            multiplier = float(value)
+            if multiplier <= 0:
+                print(
+                    f"Invalid mouse_wheel.{key} value: {value}. "
+                    f"Must be > 0. Using default value {default}."
+                )
+                return default
+            return multiplier
+        except (ValueError, TypeError):
+            print(
+                f"Invalid mouse_wheel.{key} value: {value}. "
+                f"Using default value {default}."
+            )
+            return default
+
     def run(self):
         if self.loop is None:
             print(f"Warning: No run action defined in window {self.title_string}.")
@@ -43,6 +102,12 @@ class Window(tk.Toplevel):
 
     def set_image_manipulator(self, image_manipulator):
         self.image_manipulator = image_manipulator
+
+    def is_ctrl_pressed(self, event):
+        return bool(event.state & 0x0004)
+
+    def is_shift_pressed(self, event):
+        return bool(event.state & 0x0001)
 
     def display_navigation_image(self, image):
         if self.image_manipulator is None:
@@ -182,24 +247,20 @@ class Window(tk.Toplevel):
         self.last_mouse_event_y = self.mouse_y
 
     def modify_ROI_zoom(self, event):
+        step_sensibility = self.get_modified_mouse_wheel_step_sensibility(event)
+
         if os.name == "nt":
             if event.delta > 0:
-                self.image_manipulator.rectangle_ROI_zoom_count += self.config[
-                    "mouse_wheel"
-                ]["step_sensibility"]
+                self.image_manipulator.rectangle_ROI_zoom_count += step_sensibility
             elif event.delta < 0:
-                self.image_manipulator.rectangle_ROI_zoom_count -= self.config[
-                    "mouse_wheel"
-                ]["step_sensibility"]
+                self.image_manipulator.rectangle_ROI_zoom_count -= step_sensibility
+
         if os.name == "posix":
             if event.num == 4:
-                self.image_manipulator.rectangle_ROI_zoom_count += self.config[
-                    "mouse_wheel"
-                ]["step_sensibility"]
+                self.image_manipulator.rectangle_ROI_zoom_count += step_sensibility
             elif event.num == 5:
-                self.image_manipulator.rectangle_ROI_zoom_count -= self.config[
-                    "mouse_wheel"
-                ]["step_sensibility"]
+                self.image_manipulator.rectangle_ROI_zoom_count -= step_sensibility
+
 
     def lock_annotation_image(self, event):
         self.annotation_mode = not self.annotation_mode
