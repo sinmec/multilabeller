@@ -122,6 +122,16 @@ class Window(tk.Toplevel):
                         1,
                     )
 
+            elif annotation_object.__class__.__name__ == "WheelCircle":
+                if annotation_object.in_configuration:
+                    cv2.drawContours(
+                        image_copy,
+                        [annotation_object.circle_contour],
+                        -1,
+                        annotation_object.color,
+                        1,
+                    )
+
         for annotation_object in self.contour_collection.items:
             if annotation_object.finished:
                 annotation_object.translate_from_navigation_to_annotation_windows(
@@ -162,7 +172,7 @@ class Window(tk.Toplevel):
                         annotation_object.color,
                         annotation_object.thickness,
                     )
-                except: #TODO: Why we are having this strange errors?
+                except:  # TODO: Why we are having this strange errors?
                     pass
 
         self.image_manipulator.annotation_image = image_copy

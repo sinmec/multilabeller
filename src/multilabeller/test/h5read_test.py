@@ -6,7 +6,7 @@ from pathlib import Path
 h5_file = Path(r"output/aiaiaia.h5")
 
 # Reading the .h5 file
-h5_dataset = h5py.File(h5_file, 'r')
+h5_dataset = h5py.File(h5_file, "r")
 
 # Show attributes
 print(h5_dataset.keys())
@@ -15,10 +15,10 @@ print(h5_dataset.keys())
 image_files = h5_dataset.keys()
 
 for image_file in image_files:
-    original_img = h5_dataset[image_file]['img'][...]
+    original_img = h5_dataset[image_file]["img"][...]
 
-    for contour_id in h5_dataset[image_file]['contours']:
-        contour = h5_dataset[image_file]['contours'][contour_id]
-        cv2.drawContours(original_img, [contour[...]], -1, [0,0,255], 2)
+    for contour_id in h5_dataset[image_file]["contours"]:
+        contour = h5_dataset[image_file]["contours"][contour_id]
+        cv2.drawContours(original_img, [contour[...]], -1, [0, 0, 255], 2)
 
-    cv2.imwrite(f'cnts_{image_file}', original_img)
+    cv2.imwrite(f"cnts_{image_file}", original_img)

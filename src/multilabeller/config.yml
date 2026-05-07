@@ -35,6 +35,7 @@ SAM:
 
 shortcuts:
   circle_mode: "b"
+  wheel_circle_mode: "w"
   ellipse_mode: "e"
   drawed_contour_mode: "c"
   save_contour: " "
@@ -45,5 +46,5 @@ shortcuts:
 
 #TODO: It should work with any image size, but its not working. We'll check this out in the future
 image_viewer:
-  width: 500
-  height: 500
+  width: 400
+  height: 400
