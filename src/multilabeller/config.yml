@@ -33,7 +33,7 @@ SAM:
 
 shortcuts:
   circle_mode: "b"
-  wheel_circle_mode: "h"
+  wheel_circle_mode: "w"
   ellipse_mode: "e"
   drawed_contour_mode: "c"
   save_contour: " "
