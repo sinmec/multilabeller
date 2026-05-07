@@ -61,13 +61,11 @@ class Window(tk.Toplevel):
     def get_modified_mouse_wheel_step_sensibility(self, event):
         step_sensibility = self.get_mouse_wheel_step_sensibility()
 
-        ctrl_speed_multiplier = self.config["mouse_wheel"].get(
-            "ctrl_speed_multiplier",
-            5.0,
+        ctrl_speed_multiplier = self._get_validated_multiplier(
+            "ctrl_speed_multiplier", 5.0
         )
-        shift_speed_multiplier = self.config["mouse_wheel"].get(
-            "shift_speed_multiplier",
-            0.25,
+        shift_speed_multiplier = self._get_validated_multiplier(
+            "shift_speed_multiplier", 0.25
         )
 
         if self.is_ctrl_pressed(event):
@@ -77,6 +75,24 @@ class Window(tk.Toplevel):
             step_sensibility *= shift_speed_multiplier
 
         return step_sensibility
+
+    def _get_validated_multiplier(self, key, default):
+        value = self.config["mouse_wheel"].get(key, default)
+        try:
+            multiplier = float(value)
+            if multiplier <= 0:
+                print(
+                    f"Invalid mouse_wheel.{key} value: {value}. "
+                    f"Must be > 0. Using default value {default}."
+                )
+                return default
+            return multiplier
+        except (ValueError, TypeError):
+            print(
+                f"Invalid mouse_wheel.{key} value: {value}. "
+                f"Using default value {default}."
+            )
+            return default
 
     def run(self):
         if self.loop is None:
