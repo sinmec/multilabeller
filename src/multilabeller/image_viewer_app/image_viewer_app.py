@@ -637,6 +637,9 @@ class ImageViewerApp:
         self.current_drawed_contour = None
 
     def save_wheel_circle_contour(self):
+        if self.current_wheel_circle is None:
+            print("No active wheel circle to save!")
+            return
         if self.current_wheel_circle.points_annotation_window[0] is None:
             print("Invalid circle center point!")
             return
