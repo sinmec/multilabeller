@@ -22,6 +22,8 @@ mouse_wheel:
     bind1: "<Button-4>"
     bind2: "<Button-5>"
   step_sensibility: auto
+  ctrl_speed_multiplier: 5.0
+  shift_speed_multiplier: 0.25
 
 left_mouse_click:
   windows: "<Double-Button-1>"

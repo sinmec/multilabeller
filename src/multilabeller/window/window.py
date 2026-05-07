@@ -58,6 +58,26 @@ class Window(tk.Toplevel):
 
         return max(0.5, min(max_image_dimension / 1000, 20.0))
 
+    def get_modified_mouse_wheel_step_sensibility(self, event):
+        step_sensibility = self.get_mouse_wheel_step_sensibility()
+
+        ctrl_speed_multiplier = self.config["mouse_wheel"].get(
+            "ctrl_speed_multiplier",
+            5.0,
+        )
+        shift_speed_multiplier = self.config["mouse_wheel"].get(
+            "shift_speed_multiplier",
+            0.25,
+        )
+
+        if self.is_ctrl_pressed(event):
+            step_sensibility *= ctrl_speed_multiplier
+
+        if self.is_shift_pressed(event):
+            step_sensibility *= shift_speed_multiplier
+
+        return step_sensibility
+
     def run(self):
         if self.loop is None:
             print(f"Warning: No run action defined in window {self.title_string}.")
@@ -67,6 +87,11 @@ class Window(tk.Toplevel):
     def set_image_manipulator(self, image_manipulator):
         self.image_manipulator = image_manipulator
 
+    def is_ctrl_pressed(self, event):
+        return bool(event.state & 0x0004)
+
+    def is_shift_pressed(self, event):
+        return bool(event.state & 0x0001)
 
     def display_navigation_image(self, image):
         if self.image_manipulator is None:
@@ -196,7 +221,7 @@ class Window(tk.Toplevel):
         self.last_mouse_event_y = self.mouse_y
 
     def modify_ROI_zoom(self, event):
-        step_sensibility = self.get_mouse_wheel_step_sensibility()
+        step_sensibility = self.get_modified_mouse_wheel_step_sensibility(event)
 
         if os.name == "nt":
             if event.delta > 0:
@@ -209,6 +234,7 @@ class Window(tk.Toplevel):
                 self.image_manipulator.rectangle_ROI_zoom_count += step_sensibility
             elif event.num == 5:
                 self.image_manipulator.rectangle_ROI_zoom_count -= step_sensibility
+
 
     def lock_annotation_image(self, event):
         self.annotation_mode = not self.annotation_mode
