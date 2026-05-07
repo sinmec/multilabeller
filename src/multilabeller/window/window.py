@@ -41,7 +41,7 @@ class Window(tk.Toplevel):
         if configured_step != "auto":
             try:
                 return float(configured_step)
-            except ValueError:
+            except (ValueError, TypeError):
                 print(
                     f"Invalid mouse_wheel.step_sensibility value: {configured_step}. "
                     "Using fallback value 1.5."
