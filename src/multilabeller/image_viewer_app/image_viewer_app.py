@@ -14,7 +14,7 @@ import torch
 import yaml
 
 from src.multilabeller.SAM.sam import SegmentAnything
-from src.multilabeller.circle import Circle
+from src.multilabeller.circle import Circle, WheelCircle
 from src.multilabeller.drawed_contour import DrawedContour
 from src.multilabeller.ellipse import Ellipse
 from src.multilabeller.image_manipulator.image_manipulator import ImageManipulator
@@ -56,7 +56,10 @@ class ImageViewerApp:
 
         self.current_drawed_contour = None
         self.current_circle = None
+        self.current_wheel_circle = None
         self.current_ellipse = None
+
+        self.last_wheel_circle_radius = 10
 
         self.annotation_objects = []
 
@@ -160,7 +163,7 @@ class ImageViewerApp:
         if self.number_of_exports == 0:
             N_h5_files = 0
             for _file in self.output_path.iterdir():
-                if not str(_file).endswith('.h5'):
+                if not str(_file).endswith(".h5"):
                     continue
                 if not image_folder_name in str(_file):
                     continue
@@ -172,7 +175,7 @@ class ImageViewerApp:
         h5_file_path = Path(self.output_path, h5_file_name)
 
         h5_file = h5py.File(h5_file_path, "w")
-        h5_file.attrs['date'] = datetime.now().strftime('%Y_%m_%d_%H_%M')
+        h5_file.attrs["date"] = datetime.now().strftime("%Y_%m_%d_%H_%M")
 
         current_image = self.image_files[self.file_index]
         img_group = h5_file.create_group(f"{current_image.name}")
@@ -189,16 +192,19 @@ class ImageViewerApp:
             if contour.navigation_window_contour is None:
                 continue
             cv2_contours = contour.navigation_window_contour
-            contours_group.create_dataset(f"cnt_{n_contours:06d}", data=np.array(cv2_contours))
+            contours_group.create_dataset(
+                f"cnt_{n_contours:06d}", data=np.array(cv2_contours)
+            )
             n_contours += 1
 
         h5_file.close()
 
-
         self.number_of_exports += 1
         self.merge_exported_files()
 
-        print(f"A total of {n_contours} contours from {current_image} successfully exported to {self.output_path}")
+        print(
+            f"A total of {n_contours} contours from {current_image} successfully exported to {self.output_path}"
+        )
 
     def merge_exported_files(self):
 
@@ -209,7 +215,7 @@ class ImageViewerApp:
         h5_file_path = Path(output_path, h5_file_name)
 
         h5_file = h5py.File(h5_file_path, "w")
-        h5_file.attrs['date'] = datetime.now().strftime('%Y_%m_%d_%H_%M')
+        h5_file.attrs["date"] = datetime.now().strftime("%Y_%m_%d_%H_%M")
 
         # 1. merge images
         n_contours = 0
@@ -219,16 +225,17 @@ class ImageViewerApp:
                 if not _img in h5_file:
                     img_group = h5_file.create_group(f"{_img}")
                     img_group.create_dataset(
-                        "img", data=np.array(tpm_h5_file[_img]['img'][...], dtype=np.uint8)
+                        "img",
+                        data=np.array(tpm_h5_file[_img]["img"][...], dtype=np.uint8),
                     )
 
                     # TODO: Check if it's necessary
-                    if not 'contours' in img_group.keys():
+                    if not "contours" in img_group.keys():
                         contours_group = img_group.create_group("contours")
 
-                contours_group = h5_file[_img]['contours']
-                for cnt in tpm_h5_file[_img]['contours']:
-                    contour = tpm_h5_file[_img]['contours'][cnt][...]
+                contours_group = h5_file[_img]["contours"]
+                for cnt in tpm_h5_file[_img]["contours"]:
+                    contour = tpm_h5_file[_img]["contours"][cnt][...]
                     contours_group.create_dataset(f"cnt_{n_contours:06d}", data=contour)
                     n_contours += 1
 
@@ -289,13 +296,14 @@ class ImageViewerApp:
         self.annotation_objects = []
         self.current_drawed_contour = None
         self.current_circle = None
+        self.current_wheel_circle = None
         self.current_ellipse = None
-
 
     def create_annotation_window_text(self):
         text = ""
         text += f"{self.config['shortcuts']['annotation_mode']}: Lock Image | "
         text += f"{self.config['shortcuts']['circle_mode']}: Circle Mode | "
+        text += f"{self.config['shortcuts']['wheel_circle_mode']}: Wheel Circle Mode | "
         text += f"{self.config['shortcuts']['ellipse_mode']}: Ellipse Mode | "
         text += (
             f"{self.config['shortcuts']['drawed_contour_mode']}: Drawed Contour Mode | "
@@ -414,6 +422,12 @@ class ImageViewerApp:
 
             self.annotation_window.bind(
                 self.config["left_mouse_click"][os_option],
+                self.mouse_wheel_circle_callback,
+                add="+",
+            )
+
+            self.annotation_window.bind(
+                self.config["left_mouse_click"][os_option],
                 self.mouse_ellipse_callback,
                 add="+",
             )
@@ -422,6 +436,11 @@ class ImageViewerApp:
                 self.annotation_window.bind(
                     "<MouseWheel>",
                     self.mouse_configure_ellipse_minor_axis_callback,
+                    add="+",
+                )
+                self.annotation_window.bind(
+                    "<MouseWheel>",
+                    self.mouse_configure_wheel_circle_radius_callback,
                     add="+",
                 )
             else:
@@ -433,6 +452,16 @@ class ImageViewerApp:
                 self.annotation_window.bind(
                     self.config["mouse_wheel"]["linux"]["bind2"],
                     self.mouse_configure_ellipse_minor_axis_callback,
+                    add="+",
+                )
+                self.annotation_window.bind(
+                    self.config["mouse_wheel"]["linux"]["bind1"],
+                    self.mouse_configure_wheel_circle_radius_callback,
+                    add="+",
+                )
+                self.annotation_window.bind(
+                    self.config["mouse_wheel"]["linux"]["bind2"],
+                    self.mouse_configure_wheel_circle_radius_callback,
                     add="+",
                 )
 
@@ -478,6 +507,20 @@ class ImageViewerApp:
                             self.current_circle = self.annotation_objects[-1]
                         if self.current_circle.finished:
                             self.current_circle = None
+
+                    if self.operation_mode == "wheel_circle":
+                        if self.current_wheel_circle is None:
+                            self.current_wheel_circle = WheelCircle()
+                            self.current_wheel_circle.radius_annotation_window = (
+                                self.last_wheel_circle_radius
+                            )
+                            self.annotation_objects.append(self.current_wheel_circle)
+                            self.contour_collection.items = self.annotation_objects
+                            self.current_wheel_circle = self.annotation_objects[-1]
+                        if self.current_wheel_circle.in_configuration:
+                            self.current_wheel_circle.configure_circle_parameters()
+                        if self.current_wheel_circle.finished:
+                            self.current_wheel_circle = None
 
                     if self.operation_mode == "drawed_contour":
                         if self.current_drawed_contour is None:
@@ -556,6 +599,9 @@ class ImageViewerApp:
         elif event.char == self.config["shortcuts"]["circle_mode"]:
             print("Circle mode")
             self.operation_mode = "circle"
+        elif event.char == self.config["shortcuts"]["wheel_circle_mode"]:
+            print("Wheel circle mode")
+            self.operation_mode = "wheel_circle"
         elif event.char == self.config["shortcuts"]["selection_mode"]:
             print("Selection mode")
             self.operation_mode = "selection"
@@ -570,6 +616,8 @@ class ImageViewerApp:
                 self.save_drawed_contour()
             elif self.operation_mode == "ellipse":
                 self.save_ellipse_contour()
+            elif self.operation_mode == "wheel_circle":
+                self.save_wheel_circle_contour()
         elif event.keysym == self.config["shortcuts"]["delete_contour"]:
             if self.operation_mode == "selection":
                 self.invalidate_selected_contours()
@@ -587,6 +635,30 @@ class ImageViewerApp:
         self.current_drawed_contour.in_progress = False
         self.current_drawed_contour.finished = True
         self.current_drawed_contour = None
+
+    def save_wheel_circle_contour(self):
+        if self.current_wheel_circle is None:
+            print("No active wheel circle to save!")
+            return
+        if self.current_wheel_circle.points_annotation_window[0] is None:
+            print("Invalid circle center point!")
+            return
+
+        self.last_wheel_circle_radius = (
+            self.current_wheel_circle.radius_annotation_window
+        )
+
+        self.current_wheel_circle.translate_from_annotation_to_navigation_windows(
+            self.image_manipulator
+        )
+        self.current_wheel_circle.translate_from_navigation_to_annotation_windows(
+            self.image_manipulator
+        )
+        self.current_wheel_circle.to_cv2_contour()
+        self.current_wheel_circle.in_progress = False
+        self.current_wheel_circle.in_configuration = False
+        self.current_wheel_circle.finished = True
+        self.current_wheel_circle = None
 
     def save_ellipse_contour(self):
         if self.current_ellipse.points_annotation_window[-1] == None:
@@ -624,6 +696,14 @@ class ImageViewerApp:
     def mouse_circle_callback(self, event):
         if self.operation_mode == "circle":
             self.current_circle.add_points(
+                self.annotation_window.point_x,
+                self.annotation_window.point_y,
+                self.image_manipulator,
+            )
+
+    def mouse_wheel_circle_callback(self, event):
+        if self.operation_mode == "wheel_circle":
+            self.current_wheel_circle.add_points(
                 self.annotation_window.point_x,
                 self.annotation_window.point_y,
                 self.image_manipulator,
@@ -673,6 +753,32 @@ class ImageViewerApp:
                 self.current_ellipse.minor_axis = min(
                     self.current_ellipse.minor_axis, self.current_ellipse.major_axis
                 )
+
+    def mouse_configure_wheel_circle_radius_callback(self, event):
+        if self.operation_mode == "wheel_circle":
+            if self.current_wheel_circle is None:
+                return
+
+            if self.current_wheel_circle.in_configuration:
+                if os.name == "nt":
+                    if event.delta > 0:
+                        self.current_wheel_circle.radius_annotation_window += 1
+                    elif event.delta < 0:
+                        self.current_wheel_circle.radius_annotation_window -= 1
+                if os.name == "posix":
+                    if event.num == 4:
+                        self.current_wheel_circle.radius_annotation_window += 1
+                    elif event.num == 5:
+                        self.current_wheel_circle.radius_annotation_window -= 1
+
+                self.current_wheel_circle.radius_annotation_window = max(
+                    self.current_wheel_circle.radius_annotation_window,
+                    1,
+                )
+                self.last_wheel_circle_radius = (
+                    self.current_wheel_circle.radius_annotation_window
+                )
+                self.current_wheel_circle.configure_circle_parameters()
 
     def start(self):
         self.initialize_windows()
