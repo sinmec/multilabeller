@@ -35,6 +35,29 @@ class Window(tk.Toplevel):
 
         self.annotation_mode = False
 
+    def get_mouse_wheel_step_sensibility(self):
+        configured_step = self.config["mouse_wheel"]["step_sensibility"]
+
+        if configured_step != "auto":
+            try:
+                return float(configured_step)
+            except ValueError:
+                print(
+                    f"Invalid mouse_wheel.step_sensibility value: {configured_step}. "
+                    "Using fallback value 1.5."
+                )
+                return 1.5
+
+        if self.image_manipulator is None:
+            return 1.5
+
+        max_image_dimension = max(
+            self.image_manipulator.navigation_image_width,
+            self.image_manipulator.navigation_image_height,
+        )
+
+        return max(0.5, min(max_image_dimension / 1000, 20.0))
+
     def run(self):
         if self.loop is None:
             print(f"Warning: No run action defined in window {self.title_string}.")
@@ -43,6 +66,7 @@ class Window(tk.Toplevel):
 
     def set_image_manipulator(self, image_manipulator):
         self.image_manipulator = image_manipulator
+
 
     def display_navigation_image(self, image):
         if self.image_manipulator is None:
@@ -172,24 +196,19 @@ class Window(tk.Toplevel):
         self.last_mouse_event_y = self.mouse_y
 
     def modify_ROI_zoom(self, event):
+        step_sensibility = self.get_mouse_wheel_step_sensibility()
+
         if os.name == "nt":
             if event.delta > 0:
-                self.image_manipulator.rectangle_ROI_zoom_count += self.config[
-                    "mouse_wheel"
-                ]["step_sensibility"]
+                self.image_manipulator.rectangle_ROI_zoom_count += step_sensibility
             elif event.delta < 0:
-                self.image_manipulator.rectangle_ROI_zoom_count -= self.config[
-                    "mouse_wheel"
-                ]["step_sensibility"]
+                self.image_manipulator.rectangle_ROI_zoom_count -= step_sensibility
+
         if os.name == "posix":
             if event.num == 4:
-                self.image_manipulator.rectangle_ROI_zoom_count += self.config[
-                    "mouse_wheel"
-                ]["step_sensibility"]
+                self.image_manipulator.rectangle_ROI_zoom_count += step_sensibility
             elif event.num == 5:
-                self.image_manipulator.rectangle_ROI_zoom_count -= self.config[
-                    "mouse_wheel"
-                ]["step_sensibility"]
+                self.image_manipulator.rectangle_ROI_zoom_count -= step_sensibility
 
     def lock_annotation_image(self, event):
         self.annotation_mode = not self.annotation_mode

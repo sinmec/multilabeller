@@ -21,7 +21,7 @@ mouse_wheel:
   linux:
     bind1: "<Button-4>"
     bind2: "<Button-5>"
-  step_sensibility: 1.5
+  step_sensibility: auto
 
 left_mouse_click:
   windows: "<Double-Button-1>"
