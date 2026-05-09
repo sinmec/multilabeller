@@ -684,7 +684,7 @@ class ImageViewerApp:
         if self.current_ellipse is None:
             print("No active ellipse to save!")
             return
-        if self.current_ellipse.points_annotation_window[-1] == None:
+        if self.current_ellipse.points_annotation_window[-1] is None:
             print("Invalid number of ellipse points!")
             return
 
