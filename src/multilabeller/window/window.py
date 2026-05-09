@@ -248,11 +248,11 @@ class Window(tk.Toplevel):
         return (
             getattr(self.image_manipulator, "x1", None),
             getattr(self.image_manipulator, "y1", None),
-            self.image_manipulator.rectangle_ROI_zoom,
-            self.image_manipulator.navigation_image_width,
-            self.image_manipulator.navigation_image_height,
-            self.image_manipulator.config["image_viewer"]["width"],
-            self.image_manipulator.config["image_viewer"]["height"],
+            getattr(self.image_manipulator, "rectangle_ROI_zoom", None),
+            getattr(self.image_manipulator, "navigation_image_width", None),
+            getattr(self.image_manipulator, "navigation_image_height", None),
+            self.image_manipulator.config.get("image_viewer", {}).get("width"),
+            self.image_manipulator.config.get("image_viewer", {}).get("height"),
         )
 
     def get_mouse_position(self, event):
