@@ -78,15 +78,15 @@ class ImageManipulator:
 
         # TODO: Better names, those are the rectangle ROI points!
         self.x1 = int(mouse_x - self.rectangle_ROI_width / 2)
-        self.y1 = int(mouse_y - self.rectangle_ROI_width / 2)
+        self.y1 = int(mouse_y - self.rectangle_ROI_height / 2)
         self.x2 = int(mouse_x + self.rectangle_ROI_width / 2)
-        self.y2 = int(mouse_y + self.rectangle_ROI_width / 2)
+        self.y2 = int(mouse_y + self.rectangle_ROI_height / 2)
 
         self.x1 = max(2, self.x1)
         self.y1 = max(2, self.y1)
 
         self.x2 = min(self.navigation_image_width - 2, self.x2)
-        self.y2 = min(self.navigation_image_height + 2, self.y2)
+        self.y2 = min(self.navigation_image_height - 2, self.y2)
 
         self.annotation_image_coordinates = (self.x1, self.x2, self.y1, self.y2)
 
@@ -112,7 +112,7 @@ class ImageManipulator:
         new_height = (
             self.rectangle_ROI_zoom
             * (y2 - y1)
-            * (self.config["image_viewer"]["height"] / self.navigation_image_width)
+            * (self.config["image_viewer"]["height"] / self.navigation_image_height)
         )
 
         new_size = (

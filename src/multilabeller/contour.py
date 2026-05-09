@@ -58,12 +58,10 @@ class Contour:
                 )
             )
 
-            # TODO: why widht here? shouldnt it be height on 'target.image_original_width'?
-            #      same applies for the translator below!
             points_navigation_window_y = target.y1 + int(
                 (point_y / target.rectangle_ROI_zoom)
                 * (
-                    target.navigation_image_width
+                    target.navigation_image_height
                     / (target.config["image_viewer"]["height"])
                 )
             )
@@ -91,7 +89,7 @@ class Contour:
                 (point_y - target.y1)
                 * (
                     target.config["image_viewer"]["height"]
-                    / target.navigation_image_width
+                    / target.navigation_image_height
                 )
                 * target.rectangle_ROI_zoom
             )
