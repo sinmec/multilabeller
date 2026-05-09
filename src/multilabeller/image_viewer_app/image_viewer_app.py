@@ -500,41 +500,22 @@ class ImageViewerApp:
 
                 if self.navigation_window.annotation_mode:
                     if self.operation_mode == "circle":
-                        if self.current_circle is None:
-                            self.current_circle = Circle()
-                            self.annotation_objects.append(self.current_circle)
-                            self.contour_collection.items = self.annotation_objects
-                            self.current_circle = self.annotation_objects[-1]
+                        self.ensure_current_circle()
                         if self.current_circle.finished:
                             self.current_circle = None
 
                     if self.operation_mode == "wheel_circle":
-                        if self.current_wheel_circle is None:
-                            self.current_wheel_circle = WheelCircle()
-                            self.current_wheel_circle.radius_annotation_window = (
-                                self.last_wheel_circle_radius
-                            )
-                            self.annotation_objects.append(self.current_wheel_circle)
-                            self.contour_collection.items = self.annotation_objects
-                            self.current_wheel_circle = self.annotation_objects[-1]
+                        self.ensure_current_wheel_circle()
                         if self.current_wheel_circle.in_configuration:
                             self.current_wheel_circle.configure_circle_parameters()
                         if self.current_wheel_circle.finished:
                             self.current_wheel_circle = None
 
                     if self.operation_mode == "drawed_contour":
-                        if self.current_drawed_contour is None:
-                            self.current_drawed_contour = DrawedContour()
-                            self.annotation_objects.append(self.current_drawed_contour)
-                            self.contour_collection.items = self.annotation_objects
-                            self.current_drawed_contour = self.annotation_objects[-1]
+                        self.ensure_current_drawed_contour()
 
                     if self.operation_mode == "ellipse":
-                        if self.current_ellipse is None:
-                            self.current_ellipse = Ellipse()
-                            self.annotation_objects.append(self.current_ellipse)
-                            self.contour_collection.items = self.annotation_objects
-                            self.current_ellipse = self.annotation_objects[-1]
+                        self.ensure_current_ellipse()
                         if self.current_ellipse.in_configuration:
                             self.current_ellipse.configure_ellipse_parameters()
                             self.current_ellipse.create_minor_axis_annotation_points()
@@ -555,6 +536,37 @@ class ImageViewerApp:
 
         self.annotation_window.loop = run_annotation_window
 
+    def ensure_current_circle(self):
+        if self.current_circle is None:
+            self.current_circle = Circle()
+            self.annotation_objects.append(self.current_circle)
+            self.contour_collection.items = self.annotation_objects
+            self.current_circle = self.annotation_objects[-1]
+
+    def ensure_current_wheel_circle(self):
+        if self.current_wheel_circle is None:
+            self.current_wheel_circle = WheelCircle()
+            self.current_wheel_circle.radius_annotation_window = (
+                self.last_wheel_circle_radius
+            )
+            self.annotation_objects.append(self.current_wheel_circle)
+            self.contour_collection.items = self.annotation_objects
+            self.current_wheel_circle = self.annotation_objects[-1]
+
+    def ensure_current_drawed_contour(self):
+        if self.current_drawed_contour is None:
+            self.current_drawed_contour = DrawedContour()
+            self.annotation_objects.append(self.current_drawed_contour)
+            self.contour_collection.items = self.annotation_objects
+            self.current_drawed_contour = self.annotation_objects[-1]
+
+    def ensure_current_ellipse(self):
+        if self.current_ellipse is None:
+            self.current_ellipse = Ellipse()
+            self.annotation_objects.append(self.current_ellipse)
+            self.contour_collection.items = self.annotation_objects
+            self.current_ellipse = self.annotation_objects[-1]
+
     def mouse_select_callback(self, event):
         if self.operation_mode == "selection":
             self.selector.update_point(
@@ -563,6 +575,7 @@ class ImageViewerApp:
 
     def mouse_configure_ellipse_minor_axis_callback(self, event):
         if self.operation_mode == "ellipse":
+            self.ensure_current_ellipse()
             if self.current_ellipse.in_configuration:
                 if os.name == "nt":
                     if event.delta > 0:
@@ -596,12 +609,15 @@ class ImageViewerApp:
         if event.char == self.config["shortcuts"]["drawed_contour_mode"]:
             print("Drawed contour mode")
             self.operation_mode = "drawed_contour"
+            self.ensure_current_drawed_contour()
         elif event.char == self.config["shortcuts"]["circle_mode"]:
             print("Circle mode")
             self.operation_mode = "circle"
+            self.ensure_current_circle()
         elif event.char == self.config["shortcuts"]["wheel_circle_mode"]:
             print("Wheel circle mode")
             self.operation_mode = "wheel_circle"
+            self.ensure_current_wheel_circle()
         elif event.char == self.config["shortcuts"]["selection_mode"]:
             print("Selection mode")
             self.operation_mode = "selection"
@@ -611,6 +627,7 @@ class ImageViewerApp:
         elif event.keysym == self.config["shortcuts"]["ellipse_mode"]:
             print("Ellipse mode")
             self.operation_mode = "ellipse"
+            self.ensure_current_ellipse()
         elif event.char == self.config["shortcuts"]["save_contour"]:
             if self.operation_mode == "drawed_contour":
                 self.save_drawed_contour()
@@ -625,6 +642,9 @@ class ImageViewerApp:
             print(f"Please chose a valid option!")
 
     def save_drawed_contour(self):
+        if self.current_drawed_contour is None:
+            print("No active drawed contour to save!")
+            return
         if len(self.current_drawed_contour.points_annotation_window) < 3:
             print("Invalid number of drawed contour points!")
             return
@@ -661,7 +681,10 @@ class ImageViewerApp:
         self.current_wheel_circle = None
 
     def save_ellipse_contour(self):
-        if self.current_ellipse.points_annotation_window[-1] == None:
+        if self.current_ellipse is None:
+            print("No active ellipse to save!")
+            return
+        if self.current_ellipse.points_annotation_window[-1] is None:
             print("Invalid number of ellipse points!")
             return
 
@@ -695,6 +718,7 @@ class ImageViewerApp:
     # TODO: Merge with ellipse's one
     def mouse_circle_callback(self, event):
         if self.operation_mode == "circle":
+            self.ensure_current_circle()
             self.current_circle.add_points(
                 self.annotation_window.point_x,
                 self.annotation_window.point_y,
@@ -703,6 +727,7 @@ class ImageViewerApp:
 
     def mouse_wheel_circle_callback(self, event):
         if self.operation_mode == "wheel_circle":
+            self.ensure_current_wheel_circle()
             self.current_wheel_circle.add_points(
                 self.annotation_window.point_x,
                 self.annotation_window.point_y,
@@ -711,6 +736,7 @@ class ImageViewerApp:
 
     def mouse_ellipse_callback(self, event):
         if self.operation_mode == "ellipse":
+            self.ensure_current_ellipse()
             self.current_ellipse.add_points(
                 self.annotation_window.point_x,
                 self.annotation_window.point_y,
@@ -730,12 +756,14 @@ class ImageViewerApp:
 
     def mouse_contour_callback(self, event):
         if self.operation_mode == "drawed_contour":
+            self.ensure_current_drawed_contour()
             self.current_drawed_contour.add_points(
                 [self.annotation_window.point_x, self.annotation_window.point_y],
             )
 
     def mouse_ellipse_axes_callback(self, event):
         if self.operation_mode == "ellipse":
+            self.ensure_current_ellipse()
             if self.current_ellipse.in_configuration:
                 if os.name == "nt":
                     if event.delta > 0:
