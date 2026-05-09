@@ -34,6 +34,7 @@ class Window(tk.Toplevel):
         self.point_y = None
 
         self.annotation_mode = False
+        self._last_annotation_transform_state = None
 
     def get_mouse_wheel_step_sensibility(self):
         configured_step = self.config["mouse_wheel"]["step_sensibility"]
@@ -102,6 +103,7 @@ class Window(tk.Toplevel):
 
     def set_image_manipulator(self, image_manipulator):
         self.image_manipulator = image_manipulator
+        self._last_annotation_transform_state = None
 
     def is_ctrl_pressed(self, event):
         return bool(event.state & 0x0004)
@@ -126,6 +128,13 @@ class Window(tk.Toplevel):
 
     def draw_annotation_window_objects(self):
         image_copy = self.image_manipulator.annotation_image_buffer.copy()
+        transform_state = self._get_annotation_transform_state()
+        transform_changed = (
+            transform_state != self._last_annotation_transform_state
+        )
+
+        if transform_changed:
+            self._last_annotation_transform_state = transform_state
 
         for annotation_object in self.contour_collection.items:
             if annotation_object.__class__.__name__ == "Ellipse":
@@ -150,10 +159,14 @@ class Window(tk.Toplevel):
 
         for annotation_object in self.contour_collection.items:
             if annotation_object.finished:
-                annotation_object.translate_from_navigation_to_annotation_windows(
-                    self.image_manipulator
-                )
-                annotation_object.to_cv2_contour()
+                if (
+                    transform_changed
+                    or annotation_object.annotation_window_contour is None
+                ):
+                    annotation_object.translate_from_navigation_to_annotation_windows(
+                        self.image_manipulator
+                    )
+                    annotation_object.to_cv2_contour()
 
         for annotation_object in self.contour_collection.items:
             if annotation_object is None:
@@ -204,9 +217,6 @@ class Window(tk.Toplevel):
             if annotation_object.in_progress:
                 continue
 
-            annotation_object.translate_from_navigation_to_annotation_windows(
-                self.image_manipulator
-            )
             annotation_object.to_cv2_contour()
 
             cv2.drawContours(
@@ -233,6 +243,17 @@ class Window(tk.Toplevel):
 
         self.canvas.create_image(0, 0, anchor=tk.NW, image=photo)
         self.canvas.photo = photo
+
+    def _get_annotation_transform_state(self):
+        return (
+            getattr(self.image_manipulator, "x1", None),
+            getattr(self.image_manipulator, "y1", None),
+            self.image_manipulator.rectangle_ROI_zoom,
+            self.image_manipulator.navigation_image_width,
+            self.image_manipulator.navigation_image_height,
+            self.image_manipulator.config["image_viewer"]["width"],
+            self.image_manipulator.config["image_viewer"]["height"],
+        )
 
     def get_mouse_position(self, event):
         self.mouse_x = event.x
