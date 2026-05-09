@@ -103,7 +103,7 @@ class Window(tk.Toplevel):
 
     def set_image_manipulator(self, image_manipulator):
         self.image_manipulator = image_manipulator
-        self._last_annotation_transform_state = None
+        self._last_annotation_transform_state = self._get_annotation_transform_state()
 
     def is_ctrl_pressed(self, event):
         return bool(event.state & 0x0004)
@@ -245,6 +245,9 @@ class Window(tk.Toplevel):
         self.canvas.photo = photo
 
     def _get_annotation_transform_state(self):
+        if self.image_manipulator is None:
+            return None
+
         return (
             getattr(self.image_manipulator, "x1", None),
             getattr(self.image_manipulator, "y1", None),
