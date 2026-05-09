@@ -103,7 +103,7 @@ class Window(tk.Toplevel):
 
     def set_image_manipulator(self, image_manipulator):
         self.image_manipulator = image_manipulator
-        self._last_annotation_transform_state = self._get_coordinate_transform_state()
+        self._last_annotation_transform_state = None
 
     def is_ctrl_pressed(self, event):
         return bool(event.state & 0x0004)
