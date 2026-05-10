@@ -368,6 +368,9 @@ class ImageViewerApp:
                 obj.to_cv2_contour()
 
             if obj.navigation_window_contour is None:
+                print(
+                    "Warning: unable to export a contour because it has no geometry yet."
+                )
                 continue
 
             cnt = np.array(obj.navigation_window_contour, dtype=np.int32)
