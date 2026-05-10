@@ -358,16 +358,19 @@ class ImageViewerApp:
         img_key = self.h5_images[self.file_index]
         saved = []
         for obj in self.annotation_objects:
-            if not obj.valid or not obj.points_image:
+            if not obj.valid:
                 continue
-            valid_pts = [pt for pt in obj.points_image if pt is not None]
-            if not valid_pts:
+
+            if obj.navigation_window_contour is None:
+                if not obj.points_image:
+                    continue
+                obj.update_window_points_from_image_points(self.image_manipulator)
+                obj.to_cv2_contour()
+
+            if obj.navigation_window_contour is None:
                 continue
-            n_pts = len(valid_pts)
-            cnt = np.zeros((n_pts, 1, 2), dtype=np.int32)
-            for i, pt in enumerate(valid_pts):
-                cnt[i, 0, 0] = int(pt[0])
-                cnt[i, 0, 1] = int(pt[1])
+
+            cnt = np.array(obj.navigation_window_contour, dtype=np.int32)
             saved.append(cnt)
         self.h5_contour_raw[img_key] = saved
 
