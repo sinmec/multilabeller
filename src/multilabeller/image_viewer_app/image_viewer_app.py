@@ -308,6 +308,7 @@ class ImageViewerApp:
     def stop_windows(self):
         self.navigation_loop_running = False
         self.annotation_loop_running = False
+        self.windows_initialized = False
 
         for window in (self.annotation_window, self.navigation_window):
             if window is None:
@@ -803,6 +804,9 @@ class ImageViewerApp:
         self.update_navigation_window()
 
     def update_navigation_window(self):
+        if not self.navigation_loop_running:
+            return
+
         if self.image_manipulator is None:
             self.root_window.after(10, self.update_navigation_window)
             return
@@ -836,6 +840,9 @@ class ImageViewerApp:
         self.update_annotation_window()
 
     def update_annotation_window(self):
+        if not self.annotation_loop_running:
+            return
+
         if self.image_manipulator is None:
             self.root_window.after(10, self.update_annotation_window)
             return
