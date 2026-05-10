@@ -278,6 +278,10 @@ class ImageViewerApp:
         self.load_image_from_file(self.image_files[self.file_index])
 
     def refresh_windows_for_new_image(self):
+        if self.navigation_window is None or self.annotation_window is None:
+            self.windows_initialized = False
+            return
+
         self.navigation_window.set_image_manipulator(self.image_manipulator)
         self.annotation_window.set_image_manipulator(self.image_manipulator)
         self.navigation_window.annotation_mode = False
@@ -300,7 +304,11 @@ class ImageViewerApp:
 
         self.reinitialize_context()
 
-        if not self.windows_initialized:
+        if (
+            not self.windows_initialized
+            or self.navigation_window is None
+            or self.annotation_window is None
+        ):
             self.start()
             self.windows_initialized = True
         else:
