@@ -304,15 +304,6 @@ class ImageViewerApp:
         with h5py.File(h5_path, "r") as h5:
             for img_key in h5.keys():
                 self.h5_images.append(img_key)
-                self.h5_image_raw[img_key] = np.array(
-                    h5[img_key]["img"][...], dtype=np.uint8
-                )
-                contours = []
-                for cnt_key in sorted(h5[img_key]["contours"].keys()):
-                    contours.append(
-                        np.array(h5[img_key]["contours"][cnt_key][...], dtype=np.int32)
-                    )
-                self.h5_contour_raw[img_key] = contours
 
         if not self.h5_images:
             print("No images found in the h5 file.")
@@ -322,8 +313,25 @@ class ImageViewerApp:
         self.select_h5_image()
         self.initialize_buttons()
 
+    def _load_h5_image_data(self, img_key):
+        """Load image and contours for *img_key* from the h5 file into the cache."""
+        with h5py.File(self.h5_file_path, "r") as h5:
+            self.h5_image_raw[img_key] = np.array(
+                h5[img_key]["img"][...], dtype=np.uint8
+            )
+            contours = []
+            for cnt_key in sorted(h5[img_key]["contours"].keys()):
+                contours.append(
+                    np.array(h5[img_key]["contours"][cnt_key][...], dtype=np.int32)
+                )
+            self.h5_contour_raw[img_key] = contours
+
     def select_h5_image(self):
         img_key = self.h5_images[self.file_index]
+
+        if img_key not in self.h5_image_raw:
+            self._load_h5_image_data(img_key)
+
         image = self.h5_image_raw[img_key]
 
         self.image_manipulator = ImageManipulator(image, self.config)
@@ -331,11 +339,7 @@ class ImageViewerApp:
 
         for cnt_array in self.h5_contour_raw[img_key]:
             contour = DrawedContour()
-            n_pts = cnt_array.shape[0]
-            contour.points_image = [
-                [int(cnt_array[i, 0, 0]), int(cnt_array[i, 0, 1])]
-                for i in range(n_pts)
-            ]
+            contour.points_image = cnt_array[:, 0, :].tolist()
             contour.in_progress = False
             contour.finished = True
             self.annotation_objects.append(contour)
@@ -399,16 +403,32 @@ class ImageViewerApp:
             return
 
         output_path = Path(output_file)
+        n_total = 0
         with h5py.File(output_path, "w") as h5_out:
             h5_out.attrs["date"] = datetime.now().strftime("%Y_%m_%d_%H_%M")
-            for img_key in self.h5_images:
-                img_group = h5_out.create_group(img_key)
-                img_group.create_dataset("img", data=self.h5_image_raw[img_key])
-                contours_group = img_group.create_group("contours")
-                for i, cnt in enumerate(self.h5_contour_raw[img_key]):
-                    contours_group.create_dataset(f"cnt_{i:06d}", data=cnt)
-
-        n_total = sum(len(v) for v in self.h5_contour_raw.values())
+            with h5py.File(self.h5_file_path, "r") as h5_src:
+                for img_key in self.h5_images:
+                    img_group = h5_out.create_group(img_key)
+                    if img_key in self.h5_image_raw:
+                        img_group.create_dataset("img", data=self.h5_image_raw[img_key])
+                    else:
+                        img_group.create_dataset(
+                            "img",
+                            data=np.array(h5_src[img_key]["img"][...], dtype=np.uint8),
+                        )
+                    contours_group = img_group.create_group("contours")
+                    if img_key in self.h5_contour_raw:
+                        contours = self.h5_contour_raw[img_key]
+                    else:
+                        contours = [
+                            np.array(
+                                h5_src[img_key]["contours"][cnt_key][...], dtype=np.int32
+                            )
+                            for cnt_key in sorted(h5_src[img_key]["contours"].keys())
+                        ]
+                    for i, cnt in enumerate(contours):
+                        contours_group.create_dataset(f"cnt_{i:06d}", data=cnt)
+                    n_total += len(contours)
         print(
             f"Exported {n_total} contours across {len(self.h5_images)} images to {output_path}"
         )
