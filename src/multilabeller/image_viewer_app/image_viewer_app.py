@@ -30,6 +30,7 @@ if os.name == "posix":
 class ImageViewerApp:
     # Keep joins short to avoid UI stalls while still giving worker loops time to exit.
     THREAD_JOIN_TIMEOUT_SECONDS = 0.2
+    THREAD_JOIN_ATTEMPTS = 2
 
     def __init__(self, root, contour_collection):
         self.previous_img_button = None
@@ -298,9 +299,10 @@ class ImageViewerApp:
 
         for thread in (self.annotation_thread, self.navigation_thread):
             if thread is not None and thread.is_alive():
-                thread.join(timeout=self.THREAD_JOIN_TIMEOUT_SECONDS)
-                if thread.is_alive():
+                for _ in range(self.THREAD_JOIN_ATTEMPTS):
                     thread.join(timeout=self.THREAD_JOIN_TIMEOUT_SECONDS)
+                    if not thread.is_alive():
+                        break
                 if thread.is_alive():
                     print(f"Warning: thread {thread.name} is still running.")
 
@@ -387,10 +389,7 @@ class ImageViewerApp:
         self.setup_run()
 
     def setup_run(self):
-        stop_event = self.window_stop_event
-        if stop_event is None:
-            stop_event = threading.Event()
-            self.window_stop_event = stop_event
+        stop_event = self.ensure_stop_event_initialized()
 
         def run_navigation_window():
             self.navigation_window.set_image_manipulator(self.image_manipulator)
@@ -842,10 +841,7 @@ class ImageViewerApp:
                 self.current_wheel_circle.configure_circle_parameters()
 
     def start(self):
-        if self.window_stop_event is None:
-            self.window_stop_event = threading.Event()
-        else:
-            self.window_stop_event.clear()
+        self.ensure_stop_event_initialized().clear()
         self.initialize_windows()
         self.navigation_thread = threading.Thread(
             target=self.navigation_window.run
@@ -858,3 +854,8 @@ class ImageViewerApp:
 
     def run(self):
         self.root_window.mainloop()
+
+    def ensure_stop_event_initialized(self):
+        if self.window_stop_event is None:
+            self.window_stop_event = threading.Event()
+        return self.window_stop_event
