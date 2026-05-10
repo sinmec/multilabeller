@@ -357,7 +357,7 @@ class ImageViewerApp:
             return
         img_key = self.h5_images[self.file_index]
         saved = []
-        for obj in self.annotation_objects:
+        for idx, obj in enumerate(self.annotation_objects):
             if not obj.valid:
                 continue
 
@@ -369,7 +369,8 @@ class ImageViewerApp:
 
             if obj.navigation_window_contour is None:
                 print(
-                    "Warning: unable to export a contour because it has no geometry yet."
+                    f"Warning: skipping object #{idx} ({obj.__class__.__name__}) "
+                    "because it has no contour geometry to export."
                 )
                 continue
 
