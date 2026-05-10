@@ -109,7 +109,7 @@ class Contour:
 
         scale = getattr(target, "navigation_display_scale", 1.0)
         pts = np.array(self.points_image, dtype=float)
-        nav_pts = np.round(pts * scale).astype(int)
+        nav_pts = np.round(pts * scale).astype(np.int32)
         self.points_navigation_window = nav_pts.tolist()
 
     def update_window_points_from_image_points(self, target):

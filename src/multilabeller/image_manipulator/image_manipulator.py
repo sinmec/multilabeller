@@ -111,10 +111,10 @@ class ImageManipulator:
         # Convert display coords to full-resolution coords for annotation cropping.
         inv_scale = 1.0 / self.navigation_display_scale
         self.annotation_image_coordinates = (
-            round(self.x1 * inv_scale),
-            round(self.x2 * inv_scale),
-            round(self.y1 * inv_scale),
-            round(self.y2 * inv_scale),
+            int(round(self.x1 * inv_scale)),
+            int(round(self.x2 * inv_scale)),
+            int(round(self.y1 * inv_scale)),
+            int(round(self.y2 * inv_scale)),
         )
 
         self.navigation_image = cv2.rectangle(
