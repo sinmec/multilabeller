@@ -299,12 +299,14 @@ class ImageViewerApp:
 
         for thread in (self.annotation_thread, self.navigation_thread):
             if thread is not None and thread.is_alive():
-                for _ in range(self.THREAD_JOIN_ATTEMPTS):
+                for attempt in range(self.THREAD_JOIN_ATTEMPTS):
                     thread.join(timeout=self.THREAD_JOIN_TIMEOUT_SECONDS)
                     if not thread.is_alive():
                         break
                 if thread.is_alive():
-                    print(f"Warning: thread {thread.name} is still running.")
+                    print(
+                        f"Warning: thread {thread.name} is still running after {attempt + 1} join attempts."
+                    )
 
         for window in (self.annotation_window, self.navigation_window):
             if window is None:
