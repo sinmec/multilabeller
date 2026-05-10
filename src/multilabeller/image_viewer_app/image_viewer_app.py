@@ -45,6 +45,9 @@ class ImageViewerApp:
         self.config = None
         self.navigation_window = None
         self.annotation_window = None
+        self.navigation_thread = None
+        self.annotation_thread = None
+        self.window_stop_event = None
 
         self.selector = Selector()
         self.read_config_file()
@@ -277,19 +280,30 @@ class ImageViewerApp:
         file_path = Path(img_path)
         image = cv2.imread(str(file_path), 1)
 
-        if self.annotation_window or self.navigation_window:
-            if (
-                self.annotation_window.winfo_exists()
-                or self.navigation_window.winfo_exists()
-            ):
-                self.annotation_window.destroy()
-                self.navigation_window.destroy()
+        self.stop_windows()
 
         self.image_manipulator = ImageManipulator(image, self.config)
 
         self.reinitialize_context()
 
         self.start()
+
+    def stop_windows(self):
+        if self.window_stop_event is not None:
+            self.window_stop_event.set()
+
+        for thread in (self.annotation_thread, self.navigation_thread):
+            if thread is not None and thread.is_alive():
+                thread.join(timeout=0.2)
+
+        for window in (self.annotation_window, self.navigation_window):
+            if window is None:
+                continue
+            try:
+                if window.winfo_exists():
+                    window.destroy()
+            except tk.TclError:
+                pass
 
     def reinitialize_context(self):
         self.contour_collection.items = []
@@ -361,10 +375,12 @@ class ImageViewerApp:
         self.setup_run()
 
     def setup_run(self):
+        stop_event = self.window_stop_event
+
         def run_navigation_window():
             self.navigation_window.set_image_manipulator(self.image_manipulator)
 
-            while True:
+            while not stop_event.is_set():
                 self.navigation_window.display_navigation_image(
                     self.image_manipulator.annotation_image
                 )
@@ -491,7 +507,7 @@ class ImageViewerApp:
 
             self.annotation_window.bind("<Key>", self.shortcut_selector, add="+")
 
-            while True:
+            while not stop_event.is_set():
                 self.annotation_window.display_annotation_image()
                 self.annotation_window.canvas.bind(
                     self.config["mouse_motion"][os_option],
@@ -811,11 +827,16 @@ class ImageViewerApp:
                 self.current_wheel_circle.configure_circle_parameters()
 
     def start(self):
+        self.window_stop_event = threading.Event()
         self.initialize_windows()
-        thread2 = threading.Thread(target=self.navigation_window.run)
-        thread1 = threading.Thread(target=self.annotation_window.run)
-        thread1.start()
-        thread2.start()
+        self.navigation_thread = threading.Thread(
+            target=self.navigation_window.run, daemon=True
+        )
+        self.annotation_thread = threading.Thread(
+            target=self.annotation_window.run, daemon=True
+        )
+        self.annotation_thread.start()
+        self.navigation_thread.start()
 
     def run(self):
         self.root_window.mainloop()
