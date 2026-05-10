@@ -50,7 +50,8 @@ class Circle(Contour):
         self.index_points += 1
 
         if self.index_points == 2:
-            self.translate_from_annotation_to_navigation_windows(target)
+            self.translate_from_annotation_to_image(target)
+            self.update_window_points_from_image_points(target)
             self.index_points = 0
             self.in_progress = False
             self.finished = True
@@ -61,14 +62,20 @@ class WheelCircle(Contour):
         super().__init__()
         self.points_annotation_window = [None]
         self.points_navigation_window = [None]
+        self.points_image = [None]
         self.radius_annotation_window = 10
         self.radius_navigation_window = 10
+        self.radius_image = 10
         self.in_configuration = False
         self.circle_contour = None
 
     def _create_cv2_contour(self, center, radius):
+        center_x = round(center[0])
+        center_y = round(center[1])
+        radius = round(radius)
+
         ellipse_poly = cv2.ellipse2Poly(
-            (center[0], center[1]), (radius, radius), 0, 360, 1, 1
+            (center_x, center_y), (radius, radius), 0, 360, 1, 1
         )
         N_points = len(ellipse_poly)
         cv2_contour = np.zeros((N_points, 1, 2), dtype=int)
@@ -103,21 +110,41 @@ class WheelCircle(Contour):
 
     def add_points(self, point_x, point_y, target):
         self.points_annotation_window[0] = [point_x, point_y]
-        self.translate_from_annotation_to_navigation_windows(target)
+        self.translate_from_annotation_to_image(target)
+        self.update_window_points_from_image_points(target)
         self.in_configuration = True
 
-    def translate_from_annotation_to_navigation_windows(self, target):
-        super().translate_from_annotation_to_navigation_windows(target)
-        self.radius_navigation_window = int(
-            self.radius_annotation_window
-            / target.rectangle_ROI_zoom
-            * (target.navigation_image_width / target.config["image_viewer"]["width"])
-        )
+    def translate_from_annotation_to_image(self, target):
+        super().translate_from_annotation_to_image(target)
 
-    def translate_from_navigation_to_annotation_windows(self, target):
-        super().translate_from_navigation_to_annotation_windows(target)
-        self.radius_annotation_window = int(
-            self.radius_navigation_window
-            * (target.config["image_viewer"]["width"] / target.navigation_image_width)
-            * target.rectangle_ROI_zoom
-        )
+        x1, x2, y1, y2 = target.annotation_image_coordinates
+
+        annotation_width = target.annotation_image.shape[1]
+        annotation_height = target.annotation_image.shape[0]
+
+        scale_x = (x2 - x1) / annotation_width
+        scale_y = (y2 - y1) / annotation_height
+
+        radius_scale = (scale_x + scale_y) / 2
+
+        self.radius_image = self.radius_annotation_window * radius_scale
+
+    def translate_from_image_to_annotation_window(self, target):
+        super().translate_from_image_to_annotation_window(target)
+
+        x1, x2, y1, y2 = target.annotation_image_coordinates
+
+        annotation_width = target.annotation_image.shape[1]
+        annotation_height = target.annotation_image.shape[0]
+
+        scale_x = annotation_width / (x2 - x1)
+        scale_y = annotation_height / (y2 - y1)
+
+        radius_scale = (scale_x + scale_y) / 2
+
+        self.radius_annotation_window = self.radius_image * radius_scale
+
+    def translate_from_image_to_navigation_window(self, target):
+        super().translate_from_image_to_navigation_window(target)
+
+        self.radius_navigation_window = self.radius_image

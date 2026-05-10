@@ -261,7 +261,6 @@ class Window(tk.Toplevel):
             elif event.num == 5:
                 self.image_manipulator.rectangle_ROI_zoom_count -= step_sensibility
 
-
     def lock_annotation_image(self, event):
         self.annotation_mode = not self.annotation_mode
         self.original_annotation_image = self.image_manipulator.annotation_image.copy()

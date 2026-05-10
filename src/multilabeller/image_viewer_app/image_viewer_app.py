@@ -648,10 +648,15 @@ class ImageViewerApp:
         if len(self.current_drawed_contour.points_annotation_window) < 3:
             print("Invalid number of drawed contour points!")
             return
-        self.current_drawed_contour.translate_from_annotation_to_navigation_windows(
+
+        self.current_drawed_contour.translate_from_annotation_to_image(
+            self.image_manipulator
+        )
+        self.current_drawed_contour.update_window_points_from_image_points(
             self.image_manipulator
         )
         self.current_drawed_contour.to_cv2_contour()
+
         self.current_drawed_contour.in_progress = False
         self.current_drawed_contour.finished = True
         self.current_drawed_contour = None
@@ -668,13 +673,14 @@ class ImageViewerApp:
             self.current_wheel_circle.radius_annotation_window
         )
 
-        self.current_wheel_circle.translate_from_annotation_to_navigation_windows(
+        self.current_wheel_circle.translate_from_annotation_to_image(
             self.image_manipulator
         )
-        self.current_wheel_circle.translate_from_navigation_to_annotation_windows(
+        self.current_wheel_circle.update_window_points_from_image_points(
             self.image_manipulator
         )
         self.current_wheel_circle.to_cv2_contour()
+
         self.current_wheel_circle.in_progress = False
         self.current_wheel_circle.in_configuration = False
         self.current_wheel_circle.finished = True
@@ -688,16 +694,12 @@ class ImageViewerApp:
             print("Invalid number of ellipse points!")
             return
 
-        self.current_ellipse.translate_from_annotation_to_navigation_windows(
-            self.image_manipulator
-        )
-        self.current_ellipse.translate_from_annotation_to_navigation_windows(
-            self.image_manipulator
-        )
-        self.current_ellipse.translate_from_navigation_to_annotation_windows(
+        self.current_ellipse.translate_from_annotation_to_image(self.image_manipulator)
+        self.current_ellipse.update_window_points_from_image_points(
             self.image_manipulator
         )
         self.current_ellipse.to_cv2_contour()
+
         self.current_ellipse.in_progress = False
         self.current_ellipse.in_configuration = False
         self.current_ellipse.finished = True

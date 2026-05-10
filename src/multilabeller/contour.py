@@ -7,6 +7,7 @@ class Contour:
         self.index_points = 0
         self.points_annotation_window = []
         self.points_navigation_window = []
+        self.points_image = []
 
         self.valid = True
         self.color = RED
@@ -38,63 +39,84 @@ class Contour:
     def add_points(self):
         print("add_points - Not implemented!")
 
-    def translate_from_annotation_to_navigation_windows(self, target):
+    def annotation_point_to_image_point(self, point_annotation_window, target):
+        x1, x2, y1, y2 = target.annotation_image_coordinates
 
-        self.points_navigation_window = [
-            [None, None] for _ in range(len(self.points_annotation_window))
-        ]
+        annotation_width = target.annotation_image.shape[1]
+        annotation_height = target.annotation_image.shape[0]
+
+        scale_x = (x2 - x1) / annotation_width
+        scale_y = (y2 - y1) / annotation_height
+
+        point_x = x1 + point_annotation_window[0] * scale_x
+        point_y = y1 + point_annotation_window[1] * scale_y
+
+        return [point_x, point_y]
+
+    def image_point_to_annotation_point(self, point_image, target):
+        x1, x2, y1, y2 = target.annotation_image_coordinates
+
+        annotation_width = target.annotation_image.shape[1]
+        annotation_height = target.annotation_image.shape[0]
+
+        scale_x = annotation_width / (x2 - x1)
+        scale_y = annotation_height / (y2 - y1)
+
+        point_x = (point_image[0] - x1) * scale_x
+        point_y = (point_image[1] - y1) * scale_y
+
+        return [round(point_x), round(point_y)]
+
+    def image_point_to_navigation_point(self, point_image, target):
+        return [round(point_image[0]), round(point_image[1])]
+
+    def translate_from_annotation_to_image(self, target):
+        self.points_image = [None for _ in range(len(self.points_annotation_window))]
+
         for i, point_annotation_window in enumerate(self.points_annotation_window):
             if point_annotation_window is None:
                 continue
 
-            point_x = point_annotation_window[0]
-            point_y = point_annotation_window[1]
-
-            points_navigation_window_x = target.x1 + int(
-                (point_x / target.rectangle_ROI_zoom)
-                * (
-                    target.navigation_image_width
-                    / (target.config["image_viewer"]["width"])
-                )
+            self.points_image[i] = self.annotation_point_to_image_point(
+                point_annotation_window,
+                target,
             )
 
-            # TODO: why widht here? shouldnt it be height on 'target.image_original_width'?
-            #      same applies for the translator below!
-            points_navigation_window_y = target.y1 + int(
-                (point_y / target.rectangle_ROI_zoom)
-                * (
-                    target.navigation_image_width
-                    / (target.config["image_viewer"]["height"])
-                )
-            )
+    def translate_from_image_to_annotation_window(self, target):
+        self.points_annotation_window = [
+            [None, None] for _ in range(len(self.points_image))
+        ]
 
-            self.points_navigation_window[i][0] = int(points_navigation_window_x)
-            self.points_navigation_window[i][1] = int(points_navigation_window_y)
-
-    def translate_from_navigation_to_annotation_windows(self, target):
-        for i, points_navigation_window in enumerate(self.points_navigation_window):
-            if points_navigation_window is None:
+        for i, point_image in enumerate(self.points_image):
+            if point_image is None:
                 continue
 
-            point_x = points_navigation_window[0]
-            point_y = points_navigation_window[1]
-
-            point_annotation_window_x = int(
-                (point_x - target.x1)
-                * (
-                    target.config["image_viewer"]["width"]
-                    / target.navigation_image_width
-                )
-                * target.rectangle_ROI_zoom
-            )
-            point_annotation_window_y = int(
-                (point_y - target.y1)
-                * (
-                    target.config["image_viewer"]["height"]
-                    / target.navigation_image_width
-                )
-                * target.rectangle_ROI_zoom
+            self.points_annotation_window[i] = self.image_point_to_annotation_point(
+                point_image,
+                target,
             )
 
-            self.points_annotation_window[i][0] = int(point_annotation_window_x)
-            self.points_annotation_window[i][1] = int(point_annotation_window_y)
+    def translate_from_image_to_navigation_window(self, target):
+        self.points_navigation_window = [
+            [None, None] for _ in range(len(self.points_image))
+        ]
+
+        for i, point_image in enumerate(self.points_image):
+            if point_image is None:
+                continue
+
+            self.points_navigation_window[i] = self.image_point_to_navigation_point(
+                point_image,
+                target,
+            )
+
+    def update_window_points_from_image_points(self, target):
+        self.translate_from_image_to_annotation_window(target)
+        self.translate_from_image_to_navigation_window(target)
+
+    def translate_from_annotation_to_navigation_windows(self, target):
+        self.translate_from_annotation_to_image(target)
+        self.translate_from_image_to_navigation_window(target)
+
+    def translate_from_navigation_to_annotation_windows(self, target):
+        self.update_window_points_from_image_points(target)
