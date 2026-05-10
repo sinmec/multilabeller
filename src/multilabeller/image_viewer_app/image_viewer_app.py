@@ -1,7 +1,5 @@
 import os
 import queue
-import threading
-import time
 import tkinter as tk
 from datetime import datetime
 from tkinter import filedialog
@@ -48,6 +46,11 @@ class ImageViewerApp:
         self.image_manipulator = None
         self.config = None
         self.navigation_window = None
+
+        self.windows_initialized = False
+        self.navigation_loop_running = False
+        self.annotation_loop_running = False
+
         self.annotation_window = None
         self.navigation_thread = None
         self.annotation_thread = None
@@ -281,17 +284,33 @@ class ImageViewerApp:
     def select_image(self):
         self.load_image_from_file(self.image_files[self.file_index])
 
+    def refresh_windows_for_new_image(self):
+        self.navigation_window.set_image_manipulator(self.image_manipulator)
+        self.annotation_window.set_image_manipulator(self.image_manipulator)
+
+        self.navigation_window.point_x = None
+        self.navigation_window.point_y = None
+        self.navigation_window.last_mouse_event_x = None
+        self.navigation_window.last_mouse_event_y = None
+
+        self.annotation_window.point_x = None
+        self.annotation_window.point_y = None
+
+        self.selector.valid = False
+
     def load_image_from_file(self, img_path):
         file_path = Path(img_path)
         image = cv2.imread(str(file_path), 1)
-
-        self.stop_windows()
 
         self.image_manipulator = ImageManipulator(image, self.config)
 
         self.reinitialize_context()
 
-        self.start()
+        if not self.windows_initialized:
+            self.start()
+            self.windows_initialized = True
+        else:
+            self.refresh_windows_for_new_image()
 
     def stop_windows(self):
         if self.window_stop_event is not None:
@@ -391,202 +410,126 @@ class ImageViewerApp:
         self.setup_run()
 
     def setup_run(self):
-        stop_event = self.ensure_stop_event_initialized()
+        self.setup_navigation_bindings()
+        self.setup_annotation_bindings()
 
-        def run_navigation_window():
-            self.navigation_window.set_image_manipulator(self.image_manipulator)
-            try:
-                if not self.navigation_window.is_canvas_available():
-                    print(
-                        "Warning: navigation canvas unavailable during setup; setup skipped (expected during window teardown)."
-                    )
-                    return
-                self.navigation_window.canvas.bind(
-                    self.config["mouse_motion"][os_option],
-                    self.navigation_window.get_mouse_position,
-                )
+    def setup_navigation_bindings(self):
+        self.navigation_window.set_image_manipulator(self.image_manipulator)
 
-                if os_option == "linux":
-                    self.navigation_window.canvas.bind(
-                        self.config["mouse_wheel"][os_option]["bind1"],
-                        self.navigation_window.modify_ROI_zoom,
-                    )
-                    self.navigation_window.canvas.bind(
-                        self.config["mouse_wheel"][os_option]["bind2"],
-                        self.navigation_window.modify_ROI_zoom,
-                    )
-                elif os_option == "windows":
-                    self.navigation_window.canvas.bind(
-                        self.config["mouse_wheel"][os_option],
-                        self.navigation_window.modify_ROI_zoom,
-                    )
+        self.navigation_window.canvas.bind(
+            self.config["mouse_motion"][os_option],
+            self.navigation_window.get_mouse_position,
+        )
 
-                self.navigation_window.bind(
-                    self.config["shortcuts"]["annotation_mode"],
-                    self.navigation_window.lock_annotation_image,
-                )
-            except tk.TclError:
-                return
-
-            while not stop_event.is_set():
-                if not self.navigation_window.is_canvas_available():
-                    break
-                self.navigation_window.display_navigation_image(
-                    self.image_manipulator.annotation_image
-                )
-
-                if not self.navigation_window.annotation_mode:
-                    self.navigation_window.draw_ROI((0, 255, 0))
-                else:
-                    self.navigation_window.image_manipulator.draw_rectangle_ROI(
-                        self.navigation_window.last_mouse_event_x,
-                        self.navigation_window.last_mouse_event_y,
-                        (255, 0, 0),
-                    )
-
-                time.sleep(0.01)
-
-        self.navigation_window.loop = run_navigation_window
-
-        def run_annotation_window():
-            self.annotation_window.set_image_manipulator(self.image_manipulator)
-            try:
-                if not self.annotation_window.is_canvas_available():
-                    print(
-                        "Warning: annotation canvas unavailable during setup; setup skipped (expected during window teardown)."
-                    )
-                    return
-                self.annotation_window.canvas.bind(
-                    self.config["mouse_motion"][os_option],
-                    self.annotation_window.get_mouse_position,
-                )
-            except tk.TclError:
-                return
-
-            self.annotation_window.bind(
-                self.config["left_mouse_click"][os_option],
-                self.annotation_window.store_annotation_point,
+        if os_option == "linux":
+            self.navigation_window.canvas.bind(
+                self.config["mouse_wheel"][os_option]["bind1"],
+                self.navigation_window.modify_ROI_zoom,
+            )
+            self.navigation_window.canvas.bind(
+                self.config["mouse_wheel"][os_option]["bind2"],
+                self.navigation_window.modify_ROI_zoom,
+            )
+        elif os_option == "windows":
+            self.navigation_window.canvas.bind(
+                self.config["mouse_wheel"][os_option],
+                self.navigation_window.modify_ROI_zoom,
             )
 
-            self.annotation_window.bind(
-                self.config["left_mouse_click"][os_option],
-                self.mouse_circle_callback,
-                add="+",
-            )
+        self.navigation_window.bind(
+            self.config["shortcuts"]["annotation_mode"],
+            self.navigation_window.lock_annotation_image,
+        )
 
-            self.annotation_window.bind(
-                self.config["left_mouse_click"][os_option],
-                self.mouse_wheel_circle_callback,
-                add="+",
-            )
+    def setup_annotation_bindings(self):
+        self.annotation_window.set_image_manipulator(self.image_manipulator)
 
-            self.annotation_window.bind(
-                self.config["left_mouse_click"][os_option],
-                self.mouse_ellipse_callback,
-                add="+",
-            )
+        self.annotation_window.canvas.bind(
+            self.config["mouse_motion"][os_option],
+            self.annotation_window.get_mouse_position,
+        )
 
-            if os.name == "nt":
-                self.annotation_window.bind(
-                    "<MouseWheel>",
-                    self.mouse_configure_ellipse_minor_axis_callback,
-                    add="+",
-                )
-                self.annotation_window.bind(
-                    "<MouseWheel>",
-                    self.mouse_configure_wheel_circle_radius_callback,
-                    add="+",
-                )
-            else:
-                self.annotation_window.bind(
-                    self.config["mouse_wheel"]["linux"]["bind1"],
-                    self.mouse_configure_ellipse_minor_axis_callback,
-                    add="+",
-                )
-                self.annotation_window.bind(
-                    self.config["mouse_wheel"]["linux"]["bind2"],
-                    self.mouse_configure_ellipse_minor_axis_callback,
-                    add="+",
-                )
-                self.annotation_window.bind(
-                    self.config["mouse_wheel"]["linux"]["bind1"],
-                    self.mouse_configure_wheel_circle_radius_callback,
-                    add="+",
-                )
-                self.annotation_window.bind(
-                    self.config["mouse_wheel"]["linux"]["bind2"],
-                    self.mouse_configure_wheel_circle_radius_callback,
-                    add="+",
-                )
+        self.annotation_window.bind(
+            self.config["left_mouse_click"][os_option],
+            self.annotation_window.store_annotation_point,
+        )
 
-            self.annotation_window.bind(
-                self.config["left_mouse_click"][os_option],
-                self.mouse_select_callback,
-                add="+",
-            )
+        self.annotation_window.bind(
+            self.config["left_mouse_click"][os_option],
+            self.mouse_circle_callback,
+            add="+",
+        )
 
-            self.annotation_window.bind(
-                self.config["left_mouse_click"][os_option],
-                self.mouse_contour_callback,
-                add="+",
-            )
+        self.annotation_window.bind(
+            self.config["left_mouse_click"][os_option],
+            self.mouse_wheel_circle_callback,
+            add="+",
+        )
 
+        self.annotation_window.bind(
+            self.config["left_mouse_click"][os_option],
+            self.mouse_ellipse_callback,
+            add="+",
+        )
+
+        if os.name == "nt":
             self.annotation_window.bind(
                 "<MouseWheel>",
-                self.mouse_ellipse_axes_callback,
+                self.mouse_configure_ellipse_minor_axis_callback,
                 add="+",
             )
-
             self.annotation_window.bind(
-                self.config["shortcuts"]["annotation_mode"],
-                self.navigation_window.lock_annotation_image,
+                "<MouseWheel>",
+                self.mouse_configure_wheel_circle_radius_callback,
+                add="+",
+            )
+        else:
+            self.annotation_window.bind(
+                self.config["mouse_wheel"]["linux"]["bind1"],
+                self.mouse_configure_ellipse_minor_axis_callback,
+                add="+",
+            )
+            self.annotation_window.bind(
+                self.config["mouse_wheel"]["linux"]["bind2"],
+                self.mouse_configure_ellipse_minor_axis_callback,
+                add="+",
+            )
+            self.annotation_window.bind(
+                self.config["mouse_wheel"]["linux"]["bind1"],
+                self.mouse_configure_wheel_circle_radius_callback,
+                add="+",
+            )
+            self.annotation_window.bind(
+                self.config["mouse_wheel"]["linux"]["bind2"],
+                self.mouse_configure_wheel_circle_radius_callback,
                 add="+",
             )
 
-            self.annotation_window.bind("<Key>", self.shortcut_selector, add="+")
+        self.annotation_window.bind(
+            self.config["left_mouse_click"][os_option],
+            self.mouse_select_callback,
+            add="+",
+        )
 
-            while not stop_event.is_set():
-                if not self.annotation_window.is_canvas_available():
-                    break
-                self.annotation_window.display_annotation_image()
+        self.annotation_window.bind(
+            self.config["left_mouse_click"][os_option],
+            self.mouse_contour_callback,
+            add="+",
+        )
 
-                if self.navigation_window.annotation_mode:
-                    if self.operation_mode == "circle":
-                        self.ensure_current_circle()
-                        if self.current_circle.finished:
-                            self.current_circle = None
+        self.annotation_window.bind(
+            "<MouseWheel>",
+            self.mouse_ellipse_axes_callback,
+            add="+",
+        )
 
-                    if self.operation_mode == "wheel_circle":
-                        self.ensure_current_wheel_circle()
-                        if self.current_wheel_circle.in_configuration:
-                            self.current_wheel_circle.configure_circle_parameters()
-                        if self.current_wheel_circle.finished:
-                            self.current_wheel_circle = None
+        self.annotation_window.bind(
+            self.config["shortcuts"]["annotation_mode"],
+            self.navigation_window.lock_annotation_image,
+            add="+",
+        )
 
-                    if self.operation_mode == "drawed_contour":
-                        self.ensure_current_drawed_contour()
-
-                    if self.operation_mode == "ellipse":
-                        self.ensure_current_ellipse()
-                        if self.current_ellipse.in_configuration:
-                            self.current_ellipse.configure_ellipse_parameters()
-                            self.current_ellipse.create_minor_axis_annotation_points()
-                        if self.current_ellipse.finished:
-                            self.current_ellipse = None
-
-                    if self.operation_mode == "selection":
-                        if self.selector.valid:
-                            self.select_contour()
-
-                else:
-                    self.navigation_window.point_x = None
-                    self.navigation_window.point_y = None
-                    self.annotation_window.point_x = None
-                    self.annotation_window.point_y = None
-
-                time.sleep(0.01)
-
-        self.annotation_window.loop = run_annotation_window
+        self.annotation_window.bind("<Key>", self.shortcut_selector, add="+")
 
     def ensure_current_circle(self):
         if self.current_circle is None:
@@ -863,21 +806,97 @@ class ImageViewerApp:
                 self.current_wheel_circle.configure_circle_parameters()
 
     def start(self):
-        self.ensure_stop_event_initialized().clear()
         self.initialize_windows()
-        self.navigation_thread = threading.Thread(
-            target=self.navigation_window.run, name="navigation_thread"
+        self.start_navigation_loop()
+        self.start_annotation_loop()
+
+    def start_navigation_loop(self):
+        if self.navigation_loop_running:
+            return
+
+        self.navigation_loop_running = True
+        self.update_navigation_window()
+
+    def update_navigation_window(self):
+        if self.image_manipulator is None:
+            self.root_window.after(10, self.update_navigation_window)
+            return
+
+        if self.navigation_window is None:
+            self.root_window.after(10, self.update_navigation_window)
+            return
+
+        self.navigation_window.set_image_manipulator(self.image_manipulator)
+
+        if not self.navigation_window.annotation_mode:
+            self.navigation_window.draw_ROI((0, 255, 0))
+        elif self.navigation_window.last_mouse_event_x is not None:
+            self.navigation_window.image_manipulator.draw_rectangle_ROI(
+                self.navigation_window.last_mouse_event_x,
+                self.navigation_window.last_mouse_event_y,
+                (255, 0, 0),
+            )
+
+        self.navigation_window.display_navigation_image(
+            self.image_manipulator.annotation_image
         )
-        self.annotation_thread = threading.Thread(
-            target=self.annotation_window.run, name="annotation_thread"
-        )
-        self.annotation_thread.start()
-        self.navigation_thread.start()
+
+        self.root_window.after(10, self.update_navigation_window)
+
+    def start_annotation_loop(self):
+        if self.annotation_loop_running:
+            return
+
+        self.annotation_loop_running = True
+        self.update_annotation_window()
+
+    def update_annotation_window(self):
+        if self.image_manipulator is None:
+            self.root_window.after(10, self.update_annotation_window)
+            return
+
+        if self.annotation_window is None:
+            self.root_window.after(10, self.update_annotation_window)
+            return
+
+        self.annotation_window.set_image_manipulator(self.image_manipulator)
+        self.annotation_window.display_annotation_image()
+
+        if self.navigation_window.annotation_mode:
+            if self.operation_mode == "circle":
+                self.ensure_current_circle()
+                if self.current_circle.finished:
+                    self.current_circle = None
+
+            if self.operation_mode == "wheel_circle":
+                self.ensure_current_wheel_circle()
+                if self.current_wheel_circle.in_configuration:
+                    self.current_wheel_circle.configure_circle_parameters()
+                if self.current_wheel_circle.finished:
+                    self.current_wheel_circle = None
+
+            if self.operation_mode == "drawed_contour":
+                self.ensure_current_drawed_contour()
+
+            if self.operation_mode == "ellipse":
+                self.ensure_current_ellipse()
+                if self.current_ellipse.in_configuration:
+                    self.current_ellipse.configure_ellipse_parameters()
+                    self.current_ellipse.create_minor_axis_annotation_points()
+                if self.current_ellipse.finished:
+                    self.current_ellipse = None
+
+            if self.operation_mode == "selection":
+                if self.selector.valid:
+                    self.select_contour()
+
+        else:
+            self.navigation_window.point_x = None
+            self.navigation_window.point_y = None
+            self.annotation_window.point_x = None
+            self.annotation_window.point_y = None
+
+        self.root_window.after(10, self.update_annotation_window)
 
     def run(self):
         self.root_window.mainloop()
-
-    def ensure_stop_event_initialized(self):
-        if self.window_stop_event is None:
-            self.window_stop_event = threading.Event()
-        return self.window_stop_event
