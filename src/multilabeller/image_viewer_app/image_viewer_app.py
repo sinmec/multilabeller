@@ -819,7 +819,10 @@ class ImageViewerApp:
 
         if not self.navigation_window.annotation_mode:
             self.navigation_window.draw_ROI((0, 255, 0))
-        elif self.navigation_window.last_mouse_event_x is not None:
+        elif (
+            self.navigation_window.last_mouse_event_x is not None
+            and self.navigation_window.last_mouse_event_y is not None
+        ):
             self.navigation_window.image_manipulator.draw_rectangle_ROI(
                 self.navigation_window.last_mouse_event_x,
                 self.navigation_window.last_mouse_event_y,
@@ -857,14 +860,20 @@ class ImageViewerApp:
         if self.navigation_window.annotation_mode:
             if self.operation_mode == "circle":
                 self.ensure_current_circle()
-                if self.current_circle.finished:
+                if self.current_circle is not None and self.current_circle.finished:
                     self.current_circle = None
 
             if self.operation_mode == "wheel_circle":
                 self.ensure_current_wheel_circle()
-                if self.current_wheel_circle.in_configuration:
+                if (
+                    self.current_wheel_circle is not None
+                    and self.current_wheel_circle.in_configuration
+                ):
                     self.current_wheel_circle.configure_circle_parameters()
-                if self.current_wheel_circle.finished:
+                if (
+                    self.current_wheel_circle is not None
+                    and self.current_wheel_circle.finished
+                ):
                     self.current_wheel_circle = None
 
             if self.operation_mode == "drawed_contour":
@@ -872,10 +881,10 @@ class ImageViewerApp:
 
             if self.operation_mode == "ellipse":
                 self.ensure_current_ellipse()
-                if self.current_ellipse.in_configuration:
+                if self.current_ellipse is not None and self.current_ellipse.in_configuration:
                     self.current_ellipse.configure_ellipse_parameters()
                     self.current_ellipse.create_minor_axis_annotation_points()
-                if self.current_ellipse.finished:
+                if self.current_ellipse is not None and self.current_ellipse.finished:
                     self.current_ellipse = None
 
             if self.operation_mode == "selection":
