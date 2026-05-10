@@ -305,7 +305,7 @@ class ImageViewerApp:
                         break
                 if thread.is_alive():
                     print(
-                        f"Warning: thread {thread.name} is still running after {self.THREAD_JOIN_ATTEMPTS} join attempts."
+                        f"Warning: thread {thread.name} is still running after {self.THREAD_JOIN_ATTEMPTS} join attempts; this may happen briefly during rapid image switching."
                     )
 
         for window in (self.annotation_window, self.navigation_window):
@@ -397,7 +397,9 @@ class ImageViewerApp:
             self.navigation_window.set_image_manipulator(self.image_manipulator)
             try:
                 if not self.navigation_window.is_canvas_available():
-                    print("Warning: navigation canvas unavailable during setup.")
+                    print(
+                        "Warning: navigation canvas unavailable during setup; setup skipped (expected during window teardown)."
+                    )
                     return
                 self.navigation_window.canvas.bind(
                     self.config["mouse_motion"][os_option],
@@ -450,7 +452,9 @@ class ImageViewerApp:
             self.annotation_window.set_image_manipulator(self.image_manipulator)
             try:
                 if not self.annotation_window.is_canvas_available():
-                    print("Warning: annotation canvas unavailable during setup.")
+                    print(
+                        "Warning: annotation canvas unavailable during setup; setup skipped (expected during window teardown)."
+                    )
                     return
                 self.annotation_window.canvas.bind(
                     self.config["mouse_motion"][os_option],
