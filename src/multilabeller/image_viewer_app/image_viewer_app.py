@@ -26,10 +26,6 @@ if os.name == "posix":
 
 
 class ImageViewerApp:
-    # Keep joins short to avoid UI stalls while still giving worker loops time to exit.
-    THREAD_JOIN_TIMEOUT_SECONDS = 0.2
-    THREAD_JOIN_ATTEMPTS = 2
-
     def __init__(self, root, contour_collection):
         self.previous_img_button = None
         self.next_img_button = None
@@ -52,9 +48,6 @@ class ImageViewerApp:
         self.annotation_loop_running = False
 
         self.annotation_window = None
-        self.navigation_thread = None
-        self.annotation_thread = None
-        self.window_stop_event = None
 
         self.selector = Selector()
         self.read_config_file()
@@ -313,19 +306,8 @@ class ImageViewerApp:
             self.refresh_windows_for_new_image()
 
     def stop_windows(self):
-        if self.window_stop_event is not None:
-            self.window_stop_event.set()
-
-        for thread in (self.annotation_thread, self.navigation_thread):
-            if thread is not None and thread.is_alive():
-                for _ in range(self.THREAD_JOIN_ATTEMPTS):
-                    thread.join(timeout=self.THREAD_JOIN_TIMEOUT_SECONDS)
-                    if not thread.is_alive():
-                        break
-                if thread.is_alive():
-                    print(
-                        f"Warning: thread {thread.name} is still running after {self.THREAD_JOIN_ATTEMPTS} join attempts; this may happen briefly during rapid image switching."
-                    )
+        self.navigation_loop_running = False
+        self.annotation_loop_running = False
 
         for window in (self.annotation_window, self.navigation_window):
             if window is None:
@@ -335,6 +317,9 @@ class ImageViewerApp:
                     window.destroy()
             except tk.TclError:
                 pass
+
+        self.annotation_window = None
+        self.navigation_window = None
 
     def close_application(self):
         self.stop_windows()
