@@ -8,6 +8,7 @@ root_window:
 
 navigation_window:
   title: "Navigation Window"
+  max_size: 1000
 
 annotation_window:
   title: "Annotation Window"

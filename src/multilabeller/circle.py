@@ -147,4 +147,5 @@ class WheelCircle(Contour):
     def translate_from_image_to_navigation_window(self, target):
         super().translate_from_image_to_navigation_window(target)
 
-        self.radius_navigation_window = self.radius_image
+        scale = getattr(target, "navigation_display_scale", 1.0)
+        self.radius_navigation_window = self.radius_image * scale

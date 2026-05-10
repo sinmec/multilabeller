@@ -1,3 +1,5 @@
+import numpy as np
+
 RED = (255, 0, 0)
 GREEN = (0, 0, 255)
 
@@ -68,7 +70,8 @@ class Contour:
         return [round(point_x), round(point_y)]
 
     def image_point_to_navigation_point(self, point_image, target):
-        return [round(point_image[0]), round(point_image[1])]
+        scale = getattr(target, "navigation_display_scale", 1.0)
+        return [round(point_image[0] * scale), round(point_image[1] * scale)]
 
     def translate_from_annotation_to_image(self, target):
         self.points_image = [None for _ in range(len(self.points_annotation_window))]
@@ -83,32 +86,31 @@ class Contour:
             )
 
     def translate_from_image_to_annotation_window(self, target):
-        self.points_annotation_window = [
-            [None, None] for _ in range(len(self.points_image))
-        ]
+        if not self.points_image:
+            self.points_annotation_window = []
+            return
 
-        for i, point_image in enumerate(self.points_image):
-            if point_image is None:
-                continue
+        x1, x2, y1, y2 = target.annotation_image_coordinates
+        annotation_width = target.annotation_image.shape[1]
+        annotation_height = target.annotation_image.shape[0]
+        scale_x = annotation_width / (x2 - x1)
+        scale_y = annotation_height / (y2 - y1)
 
-            self.points_annotation_window[i] = self.image_point_to_annotation_point(
-                point_image,
-                target,
-            )
+        pts = np.array(self.points_image, dtype=float)
+        ann_pts = np.empty_like(pts)
+        ann_pts[:, 0] = (pts[:, 0] - x1) * scale_x
+        ann_pts[:, 1] = (pts[:, 1] - y1) * scale_y
+        self.points_annotation_window = ann_pts.tolist()
 
     def translate_from_image_to_navigation_window(self, target):
-        self.points_navigation_window = [
-            [None, None] for _ in range(len(self.points_image))
-        ]
+        if not self.points_image:
+            self.points_navigation_window = []
+            return
 
-        for i, point_image in enumerate(self.points_image):
-            if point_image is None:
-                continue
-
-            self.points_navigation_window[i] = self.image_point_to_navigation_point(
-                point_image,
-                target,
-            )
+        scale = getattr(target, "navigation_display_scale", 1.0)
+        pts = np.array(self.points_image, dtype=float)
+        nav_pts = np.round(pts * scale).astype(int)
+        self.points_navigation_window = nav_pts.tolist()
 
     def update_window_points_from_image_points(self, target):
         self.translate_from_image_to_annotation_window(target)

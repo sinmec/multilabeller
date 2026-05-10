@@ -360,6 +360,7 @@ class ImageViewerApp:
         if not self.h5_mode or not self.h5_images:
             return
         img_key = self.h5_images[self.file_index]
+        nav_scale = self.image_manipulator.navigation_display_scale
         saved = []
         for idx, obj in enumerate(self.annotation_objects):
             if not obj.valid or not obj.finished:
@@ -383,7 +384,10 @@ class ImageViewerApp:
                 )
                 continue
 
-            cnt = np.array(obj.navigation_window_contour, dtype=np.int32)
+            # navigation_window_contour is in display (scaled) coords; convert back to
+            # full-resolution image coords for storage.
+            cnt_disp = np.array(obj.navigation_window_contour, dtype=float)
+            cnt = np.round(cnt_disp / nav_scale).astype(np.int32)
             saved.append(cnt)
         self.h5_contour_raw[img_key] = saved
 

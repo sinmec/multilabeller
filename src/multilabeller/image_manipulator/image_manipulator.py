@@ -5,11 +5,28 @@ import numpy as np
 class ImageManipulator:
     def __init__(self, image, config):
         self.config = config
-        self.navigation_image_original = image.copy()
+
+        # Full-resolution image kept for high-quality annotation crops.
+        self.annotation_image_full_res = image.copy()
         self.annotation_image_original = image.copy()
+
+        # Compute a display scale so the navigation window stays responsive.
+        orig_h, orig_w = image.shape[:2]
+        max_nav = config.get("navigation_window", {}).get("max_size", 1000)
+        nav_scale = min(max_nav / orig_w, max_nav / orig_h, 1.0)
+        self.navigation_display_scale = nav_scale
+
+        nav_w = int(orig_w * nav_scale)
+        nav_h = int(orig_h * nav_scale)
+        if nav_scale < 1.0:
+            nav_image = cv2.resize(image, (nav_w, nav_h))
+        else:
+            nav_image = image.copy()
+
         self.i = 0
-        self.navigation_image = image.copy()
-        self.navigation_image_buffer = image.copy()
+        self.navigation_image_original = nav_image.copy()
+        self.navigation_image = nav_image.copy()
+        self.navigation_image_buffer = nav_image.copy()
         self.annotation_image = image.copy()
         self.annotation_image_buffer = image.copy()
 
@@ -37,11 +54,13 @@ class ImageManipulator:
         self.navigation_image_aspect_ratio = (
             self.navigation_image_height / self.navigation_image_width
         )
+        # annotation_image_coordinates are always in full-resolution image space.
+        orig_h, orig_w = self.annotation_image_full_res.shape[:2]
         self.annotation_image_coordinates = (
             0,
-            self.navigation_image_width,
+            orig_w,
             0,
-            self.navigation_image_height,
+            orig_h,
         )
 
     def initialize_rectangle_ROI(self):
@@ -76,6 +95,7 @@ class ImageManipulator:
         rectangle_color = color
         rectangle_width = 2
 
+        # Compute rectangle bounds in display (scaled navigation) space.
         # TODO: Better names, those are the rectangle ROI points!
         self.x1 = int(mouse_x - self.rectangle_ROI_width / 2)
         self.y1 = int(mouse_y - self.rectangle_ROI_width / 2)
@@ -88,7 +108,14 @@ class ImageManipulator:
         self.x2 = min(self.navigation_image_width - 2, self.x2)
         self.y2 = min(self.navigation_image_height + 2, self.y2)
 
-        self.annotation_image_coordinates = (self.x1, self.x2, self.y1, self.y2)
+        # Convert display coords to full-resolution coords for annotation cropping.
+        inv_scale = 1.0 / self.navigation_display_scale
+        self.annotation_image_coordinates = (
+            round(self.x1 * inv_scale),
+            round(self.x2 * inv_scale),
+            round(self.y1 * inv_scale),
+            round(self.y2 * inv_scale),
+        )
 
         self.navigation_image = cv2.rectangle(
             self.navigation_image_original.copy(),
@@ -102,17 +129,19 @@ class ImageManipulator:
 
     def update_annotation_image(self):
         x1, x2, y1, y2 = self.annotation_image_coordinates
-        image_ROI = self.navigation_image_original[y1:y2, x1:x2]
+        # Crop from the full-resolution original so the annotation window is sharp.
+        image_ROI = self.annotation_image_full_res[y1:y2, x1:x2]
 
+        orig_w = self.annotation_image_full_res.shape[1]
         new_width = (
             self.rectangle_ROI_zoom
             * (x2 - x1)
-            * (self.config["image_viewer"]["width"] / self.navigation_image_width)
+            * (self.config["image_viewer"]["width"] / orig_w)
         )
         new_height = (
             self.rectangle_ROI_zoom
             * (y2 - y1)
-            * (self.config["image_viewer"]["height"] / self.navigation_image_width)
+            * (self.config["image_viewer"]["height"] / orig_w)
         )
 
         new_size = (

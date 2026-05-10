@@ -164,7 +164,7 @@ class Window(tk.Toplevel):
 
         for annotation_object in self.contour_collection.items:
             if annotation_object.finished:
-                annotation_object.translate_from_navigation_to_annotation_windows(
+                annotation_object.update_window_points_from_image_points(
                     self.image_manipulator
                 )
                 annotation_object.to_cv2_contour()
@@ -218,7 +218,7 @@ class Window(tk.Toplevel):
             if annotation_object.in_progress:
                 continue
 
-            annotation_object.translate_from_navigation_to_annotation_windows(
+            annotation_object.update_window_points_from_image_points(
                 self.image_manipulator
             )
             annotation_object.to_cv2_contour()
