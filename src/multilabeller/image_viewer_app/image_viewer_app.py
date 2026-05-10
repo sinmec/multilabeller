@@ -363,13 +363,17 @@ class ImageViewerApp:
 
             if obj.navigation_window_contour is None:
                 if not obj.points_image:
+                    print(
+                        f"Warning: skipping object #{idx + 1} ({obj.__class__.__name__}) "
+                        "because it has no image points or contour geometry to export."
+                    )
                     continue
                 obj.update_window_points_from_image_points(self.image_manipulator)
                 obj.to_cv2_contour()
 
             if obj.navigation_window_contour is None:
                 print(
-                    f"Warning: skipping object #{idx} ({obj.__class__.__name__}) "
+                    f"Warning: skipping object #{idx + 1} ({obj.__class__.__name__}) "
                     "because it has no contour geometry to export."
                 )
                 continue
