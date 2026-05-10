@@ -280,6 +280,7 @@ class ImageViewerApp:
     def refresh_windows_for_new_image(self):
         self.navigation_window.set_image_manipulator(self.image_manipulator)
         self.annotation_window.set_image_manipulator(self.image_manipulator)
+        self.navigation_window.annotation_mode = False
 
         self.navigation_window.point_x = None
         self.navigation_window.point_y = None
