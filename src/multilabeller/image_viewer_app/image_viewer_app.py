@@ -395,11 +395,9 @@ class ImageViewerApp:
 
         def run_navigation_window():
             self.navigation_window.set_image_manipulator(self.image_manipulator)
-
-            while not stop_event.is_set():
-                self.navigation_window.display_navigation_image(
-                    self.image_manipulator.annotation_image
-                )
+            try:
+                if not self.navigation_window.is_canvas_available():
+                    return
                 self.navigation_window.canvas.bind(
                     self.config["mouse_motion"][os_option],
                     self.navigation_window.get_mouse_position,
@@ -424,6 +422,15 @@ class ImageViewerApp:
                     self.config["shortcuts"]["annotation_mode"],
                     self.navigation_window.lock_annotation_image,
                 )
+            except tk.TclError:
+                return
+
+            while not stop_event.is_set():
+                if not self.navigation_window.is_canvas_available():
+                    break
+                self.navigation_window.display_navigation_image(
+                    self.image_manipulator.annotation_image
+                )
 
                 if not self.navigation_window.annotation_mode:
                     self.navigation_window.draw_ROI((0, 255, 0))
@@ -440,6 +447,15 @@ class ImageViewerApp:
 
         def run_annotation_window():
             self.annotation_window.set_image_manipulator(self.image_manipulator)
+            try:
+                if not self.annotation_window.is_canvas_available():
+                    return
+                self.annotation_window.canvas.bind(
+                    self.config["mouse_motion"][os_option],
+                    self.annotation_window.get_mouse_position,
+                )
+            except tk.TclError:
+                return
 
             self.annotation_window.bind(
                 self.config["left_mouse_click"][os_option],
@@ -524,11 +540,9 @@ class ImageViewerApp:
             self.annotation_window.bind("<Key>", self.shortcut_selector, add="+")
 
             while not stop_event.is_set():
+                if not self.annotation_window.is_canvas_available():
+                    break
                 self.annotation_window.display_annotation_image()
-                self.annotation_window.canvas.bind(
-                    self.config["mouse_motion"][os_option],
-                    self.annotation_window.get_mouse_position,
-                )
 
                 if self.navigation_window.annotation_mode:
                     if self.operation_mode == "circle":
