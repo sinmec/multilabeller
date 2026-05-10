@@ -109,11 +109,22 @@ class Window(tk.Toplevel):
     def is_shift_pressed(self, event):
         return bool(event.state & 0x0001)
 
+    def is_canvas_available(self):
+        if self.canvas is None:
+            return False
+
+        try:
+            return bool(self.winfo_exists() and self.canvas.winfo_exists())
+        except tk.TclError:
+            return False
+
     def display_navigation_image(self, image):
         if self.image_manipulator is None:
             print(
                 f"Warning: No image manipulator in window {self.title_string} was defined."
             )
+            return
+        if not self.is_canvas_available():
             return
 
         self.draw_navigation_window_objects()
@@ -121,7 +132,10 @@ class Window(tk.Toplevel):
         image = Image.fromarray(self.image_manipulator.navigation_image)
         photo = ImageTk.PhotoImage(image=image)
 
-        self.canvas.create_image(0, 0, anchor=tk.NW, image=photo)
+        try:
+            self.canvas.create_image(0, 0, anchor=tk.NW, image=photo)
+        except tk.TclError:
+            return
         self.canvas.photo = photo
 
     def draw_annotation_window_objects(self):
@@ -225,13 +239,18 @@ class Window(tk.Toplevel):
                 f"Warning: No image manipulator in window {self.title_string} was defined."
             )
             return
+        if not self.is_canvas_available():
+            return
 
         self.draw_annotation_window_objects()
 
         image = Image.fromarray(self.image_manipulator.annotation_image)
         photo = ImageTk.PhotoImage(image=image)
 
-        self.canvas.create_image(0, 0, anchor=tk.NW, image=photo)
+        try:
+            self.canvas.create_image(0, 0, anchor=tk.NW, image=photo)
+        except tk.TclError:
+            return
         self.canvas.photo = photo
 
     def get_mouse_position(self, event):
