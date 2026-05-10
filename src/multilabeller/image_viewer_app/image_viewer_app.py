@@ -28,6 +28,7 @@ if os.name == "posix":
 
 
 class ImageViewerApp:
+    # Keep joins short to avoid UI stalls while still giving worker loops time to exit.
     THREAD_JOIN_TIMEOUT_SECONDS = 0.2
 
     def __init__(self, root, contour_collection):
@@ -831,7 +832,10 @@ class ImageViewerApp:
                 self.current_wheel_circle.configure_circle_parameters()
 
     def start(self):
-        self.window_stop_event = threading.Event()
+        if self.window_stop_event is None:
+            self.window_stop_event = threading.Event()
+        else:
+            self.window_stop_event.clear()
         self.initialize_windows()
         self.navigation_thread = threading.Thread(
             target=self.navigation_window.run, daemon=True
