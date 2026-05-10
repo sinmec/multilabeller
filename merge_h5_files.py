@@ -13,7 +13,6 @@ from datetime import datetime
 from pathlib import Path
 
 import h5py
-import numpy as np
 
 
 def merge_h5_files(input_dir: Path, output_file: Path) -> tuple[int, int]:
@@ -30,18 +29,30 @@ def merge_h5_files(input_dir: Path, output_file: Path) -> tuple[int, int]:
     n_contours = 0
 
     with h5py.File(output_file, "w") as h5_out:
-        h5_out.attrs["date"] = datetime.now().strftime("%Y_%m_%d_%H_%M")
+        h5_out.attrs["date"] = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
 
         for h5_path in h5_files:
             with h5py.File(h5_path, "r") as h5_in:
                 for img_key in h5_in.keys():
                     if img_key not in h5_out:
                         img_group = h5_out.create_group(img_key)
-                        img_group.create_dataset(
-                            "img", data=np.array(h5_in[img_key]["img"][...], dtype=np.uint8)
-                        )
+                        img_group.create_dataset("img", data=h5_in[img_key]["img"][...])
                         img_group.create_group("contours")
                         n_images += 1
+                    else:
+                        src_img = h5_in[img_key]["img"]
+                        dst_img = h5_out[img_key]["img"]
+                        if src_img.shape != dst_img.shape or src_img.dtype != dst_img.dtype:
+                            print(
+                                f"Warning: duplicate image key '{img_key}' in {h5_path} has "
+                                "different image shape/dtype; keeping first image and merging "
+                                "only contours."
+                            )
+                        else:
+                            print(
+                                f"Warning: duplicate image key '{img_key}' found in {h5_path}; "
+                                "keeping first image data and merging contours."
+                            )
 
                     contours_group = h5_out[img_key]["contours"]
                     next_index = len(contours_group)
