@@ -397,6 +397,7 @@ class ImageViewerApp:
             self.navigation_window.set_image_manipulator(self.image_manipulator)
             try:
                 if not self.navigation_window.is_canvas_available():
+                    print("Warning: navigation canvas unavailable during setup.")
                     return
                 self.navigation_window.canvas.bind(
                     self.config["mouse_motion"][os_option],
@@ -449,6 +450,7 @@ class ImageViewerApp:
             self.annotation_window.set_image_manipulator(self.image_manipulator)
             try:
                 if not self.annotation_window.is_canvas_available():
+                    print("Warning: annotation canvas unavailable during setup.")
                     return
                 self.annotation_window.canvas.bind(
                     self.config["mouse_motion"][os_option],
