@@ -28,6 +28,8 @@ if os.name == "posix":
 
 
 class ImageViewerApp:
+    THREAD_JOIN_TIMEOUT_SECONDS = 0.2
+
     def __init__(self, root, contour_collection):
         self.previous_img_button = None
         self.next_img_button = None
@@ -294,7 +296,7 @@ class ImageViewerApp:
 
         for thread in (self.annotation_thread, self.navigation_thread):
             if thread is not None and thread.is_alive():
-                thread.join(timeout=0.2)
+                thread.join(timeout=self.THREAD_JOIN_TIMEOUT_SECONDS)
 
         for window in (self.annotation_window, self.navigation_window):
             if window is None:
@@ -375,6 +377,8 @@ class ImageViewerApp:
         self.setup_run()
 
     def setup_run(self):
+        if self.window_stop_event is None:
+            self.window_stop_event = threading.Event()
         stop_event = self.window_stop_event
 
         def run_navigation_window():
