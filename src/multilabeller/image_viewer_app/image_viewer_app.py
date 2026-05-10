@@ -110,6 +110,7 @@ class ImageViewerApp:
     def initialize_main_window(self):
         self.root_window.title(self.config["root_window"]["name"])
         self.root_window.geometry("260x140")
+        self.root_window.protocol("WM_DELETE_WINDOW", self.close_application)
 
         load_file_button = tk.Button(
             self.root_window, text="Open images directory", command=self.open_directory
@@ -298,6 +299,10 @@ class ImageViewerApp:
         for thread in (self.annotation_thread, self.navigation_thread):
             if thread is not None and thread.is_alive():
                 thread.join(timeout=self.THREAD_JOIN_TIMEOUT_SECONDS)
+                if thread.is_alive():
+                    thread.join(timeout=self.THREAD_JOIN_TIMEOUT_SECONDS)
+                if thread.is_alive():
+                    print(f"Warning: thread {thread.name} is still running.")
 
         for window in (self.annotation_window, self.navigation_window):
             if window is None:
@@ -307,6 +312,10 @@ class ImageViewerApp:
                     window.destroy()
             except tk.TclError:
                 pass
+
+    def close_application(self):
+        self.stop_windows()
+        self.root_window.destroy()
 
     def reinitialize_context(self):
         self.contour_collection.items = []
@@ -378,9 +387,10 @@ class ImageViewerApp:
         self.setup_run()
 
     def setup_run(self):
-        if self.window_stop_event is None:
-            self.window_stop_event = threading.Event()
         stop_event = self.window_stop_event
+        if stop_event is None:
+            stop_event = threading.Event()
+            self.window_stop_event = stop_event
 
         def run_navigation_window():
             self.navigation_window.set_image_manipulator(self.image_manipulator)
@@ -838,10 +848,10 @@ class ImageViewerApp:
             self.window_stop_event.clear()
         self.initialize_windows()
         self.navigation_thread = threading.Thread(
-            target=self.navigation_window.run, daemon=True
+            target=self.navigation_window.run
         )
         self.annotation_thread = threading.Thread(
-            target=self.annotation_window.run, daemon=True
+            target=self.annotation_window.run
         )
         self.annotation_thread.start()
         self.navigation_thread.start()
