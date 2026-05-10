@@ -66,6 +66,14 @@ class ImageViewerApp:
 
         self.annotation_objects = []
 
+        self.h5_mode = False
+        self.h5_file_path = None
+        self.h5_images = []
+        self.h5_image_raw = {}
+        self.h5_contour_raw = {}
+
+        self.buttons_initialized = False
+
     def initialize_SAM(self):
         if self.config["SAM"]["device"] == "gpu":
             cuda_available = torch.cuda.is_available()
@@ -106,7 +114,7 @@ class ImageViewerApp:
 
     def initialize_main_window(self):
         self.root_window.title(self.config["root_window"]["name"])
-        self.root_window.geometry("260x140")
+        self.root_window.geometry("260x170")
         self.root_window.protocol("WM_DELETE_WINDOW", self.close_application)
 
         load_file_button = tk.Button(
@@ -114,7 +122,16 @@ class ImageViewerApp:
         )
         load_file_button.pack()
 
+        load_h5_button = tk.Button(
+            self.root_window, text="Open .h5 file", command=self.open_h5_file
+        )
+        load_h5_button.pack()
+
     def initialize_buttons(self):
+        if self.buttons_initialized:
+            return
+        self.buttons_initialized = True
+
         export_button = tk.Button(
             self.root_window, text="Export Contours", command=self.export_contours
         )
@@ -137,18 +154,34 @@ class ImageViewerApp:
         export_button.pack()
 
     def next_image_button(self):
-        if self.file_index != len(self.image_files):
-            self.file_index += 1
+        if self.h5_mode:
+            self.save_current_h5_contours()
+            if self.file_index < len(self.h5_images) - 1:
+                self.file_index += 1
+            else:
+                self.file_index = 0
+            self.select_h5_image()
         else:
-            self.file_index = 0
-        self.select_image()
+            if self.file_index != len(self.image_files):
+                self.file_index += 1
+            else:
+                self.file_index = 0
+            self.select_image()
 
     def previous_image_button(self):
-        if self.file_index != 0:
-            self.file_index -= 1
+        if self.h5_mode:
+            self.save_current_h5_contours()
+            if self.file_index != 0:
+                self.file_index -= 1
+            else:
+                self.file_index = len(self.h5_images) - 1
+            self.select_h5_image()
         else:
-            self.file_index = len(self.image_files)
-        self.select_image()
+            if self.file_index != 0:
+                self.file_index -= 1
+            else:
+                self.file_index = len(self.image_files)
+            self.select_image()
 
     def copy_h5_contents(self, src_path, dest_path):
         with h5py.File(src_path, "r") as src_file:
@@ -157,6 +190,10 @@ class ImageViewerApp:
                     src_file.copy(item, dest_file)
 
     def export_contours(self):
+        if self.h5_mode:
+            self.export_h5_contours()
+            return
+
         print("Started contours exporting...")
 
         image_folder_name = self.image_files_path.stem
@@ -249,6 +286,132 @@ class ImageViewerApp:
 
     def initialize_queue(self):
         self.shared_queue = queue.Queue()
+
+    def open_h5_file(self):
+        file_path = filedialog.askopenfilename(
+            filetypes=[("HDF5 files", "*.h5"), ("All files", "*.*")]
+        )
+        if file_path:
+            self.load_from_h5(Path(file_path))
+
+    def load_from_h5(self, h5_path):
+        self.h5_file_path = h5_path
+        self.h5_mode = True
+        self.h5_images = []
+        self.h5_image_raw = {}
+        self.h5_contour_raw = {}
+
+        with h5py.File(h5_path, "r") as h5:
+            for img_key in h5.keys():
+                self.h5_images.append(img_key)
+                self.h5_image_raw[img_key] = np.array(
+                    h5[img_key]["img"][...], dtype=np.uint8
+                )
+                contours = []
+                for cnt_key in sorted(h5[img_key]["contours"].keys()):
+                    contours.append(
+                        np.array(h5[img_key]["contours"][cnt_key][...], dtype=np.int32)
+                    )
+                self.h5_contour_raw[img_key] = contours
+
+        if not self.h5_images:
+            print("No images found in the h5 file.")
+            return
+
+        self.file_index = 0
+        self.select_h5_image()
+        self.initialize_buttons()
+
+    def select_h5_image(self):
+        img_key = self.h5_images[self.file_index]
+        image = self.h5_image_raw[img_key]
+
+        self.image_manipulator = ImageManipulator(image, self.config)
+        self.reinitialize_context()
+
+        for cnt_array in self.h5_contour_raw[img_key]:
+            contour = DrawedContour()
+            n_pts = cnt_array.shape[0]
+            contour.points_image = [
+                [int(cnt_array[i, 0, 0]), int(cnt_array[i, 0, 1])]
+                for i in range(n_pts)
+            ]
+            contour.in_progress = False
+            contour.finished = True
+            self.annotation_objects.append(contour)
+
+        self.contour_collection.items = self.annotation_objects
+
+        if (
+            not self.windows_initialized
+            or self.navigation_window is None
+            or self.annotation_window is None
+        ):
+            self.start()
+            self.windows_initialized = True
+        else:
+            self.refresh_windows_for_new_image()
+
+    def save_current_h5_contours(self):
+        if not self.h5_mode or not self.h5_images:
+            return
+        img_key = self.h5_images[self.file_index]
+        saved = []
+        for idx, obj in enumerate(self.annotation_objects):
+            if not obj.valid or not obj.finished:
+                continue
+
+            if obj.navigation_window_contour is None:
+                valid_pts = [pt for pt in obj.points_image if pt is not None]
+                if not valid_pts:
+                    print(
+                        f"Warning: skipping object #{idx + 1} ({obj.__class__.__name__}) "
+                        "because it has no image points or contour geometry to export."
+                    )
+                    continue
+                obj.update_window_points_from_image_points(self.image_manipulator)
+                obj.to_cv2_contour()
+
+            if obj.navigation_window_contour is None:
+                print(
+                    f"Warning: skipping object #{idx + 1} ({obj.__class__.__name__}) "
+                    "because it has no contour geometry to export."
+                )
+                continue
+
+            cnt = np.array(obj.navigation_window_contour, dtype=np.int32)
+            saved.append(cnt)
+        self.h5_contour_raw[img_key] = saved
+
+    def export_h5_contours(self):
+        print("Started h5 export...")
+        self.save_current_h5_contours()
+
+        default_name = self.h5_file_path.stem + "_modified.h5"
+        output_file = filedialog.asksaveasfilename(
+            defaultextension=".h5",
+            filetypes=[("HDF5 files", "*.h5"), ("All files", "*.*")],
+            initialfile=default_name,
+            initialdir=str(self.h5_file_path.parent),
+        )
+        if not output_file:
+            print("Export cancelled.")
+            return
+
+        output_path = Path(output_file)
+        with h5py.File(output_path, "w") as h5_out:
+            h5_out.attrs["date"] = datetime.now().strftime("%Y_%m_%d_%H_%M")
+            for img_key in self.h5_images:
+                img_group = h5_out.create_group(img_key)
+                img_group.create_dataset("img", data=self.h5_image_raw[img_key])
+                contours_group = img_group.create_group("contours")
+                for i, cnt in enumerate(self.h5_contour_raw[img_key]):
+                    contours_group.create_dataset(f"cnt_{i:06d}", data=cnt)
+
+        n_total = sum(len(v) for v in self.h5_contour_raw.values())
+        print(
+            f"Exported {n_total} contours across {len(self.h5_images)} images to {output_path}"
+        )
 
     def open_directory(self):
         while True:
