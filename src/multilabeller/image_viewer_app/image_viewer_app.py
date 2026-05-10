@@ -358,11 +358,12 @@ class ImageViewerApp:
         img_key = self.h5_images[self.file_index]
         saved = []
         for idx, obj in enumerate(self.annotation_objects):
-            if not obj.valid:
+            if not obj.valid or not obj.finished:
                 continue
 
             if obj.navigation_window_contour is None:
-                if not obj.points_image:
+                valid_pts = [pt for pt in obj.points_image if pt is not None]
+                if not valid_pts:
                     print(
                         f"Warning: skipping object #{idx + 1} ({obj.__class__.__name__}) "
                         "because it has no image points or contour geometry to export."
