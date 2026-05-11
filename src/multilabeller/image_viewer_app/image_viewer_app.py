@@ -886,12 +886,10 @@ class ImageViewerApp:
 
         if self.image_manipulator is not None:
             if self.navigation_window is not None:
-                self.navigation_window.set_image_manipulator(self.image_manipulator)
                 self.navigation_window.display_navigation_image(
                     self.image_manipulator.annotation_image
                 )
             if self.annotation_window is not None:
-                self.annotation_window.set_image_manipulator(self.image_manipulator)
                 self.annotation_window.display_annotation_image()
 
         if self.contours_visible:
