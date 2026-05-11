@@ -485,6 +485,9 @@ class ImageViewerApp:
             scrollregion=(0, 0, navigation_width, navigation_height),
         )
 
+        self.navigation_window.canvas.xview_moveto(0)
+        self.navigation_window.canvas.yview_moveto(0)
+
         self.navigation_window.point_x = None
         self.navigation_window.point_y = None
         self.navigation_window.last_mouse_event_x = None
