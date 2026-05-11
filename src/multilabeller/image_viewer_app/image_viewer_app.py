@@ -24,6 +24,8 @@ if os.name == "nt":
 if os.name == "posix":
     os_option = "linux"
 
+WINDOW_REFRESH_INTERVAL_MS = 33
+
 
 class ImageViewerApp:
     def __init__(self, root, contour_collection):
@@ -340,6 +342,8 @@ class ImageViewerApp:
         for cnt_array in self.h5_contour_raw[img_key]:
             contour = DrawedContour()
             contour.points_image = cnt_array[:, 0, :].tolist()
+            contour.points_navigation_window = contour.points_image.copy()
+            contour.navigation_window_contour = cnt_array
             contour.in_progress = False
             contour.finished = True
             self.annotation_objects.append(contour)
@@ -422,7 +426,8 @@ class ImageViewerApp:
                     else:
                         contours = [
                             np.array(
-                                h5_src[img_key]["contours"][cnt_key][...], dtype=np.int32
+                                h5_src[img_key]["contours"][cnt_key][...],
+                                dtype=np.int32,
                             )
                             for cnt_key in sorted(h5_src[img_key]["contours"].keys())
                         ]
@@ -1000,11 +1005,15 @@ class ImageViewerApp:
             return
 
         if self.image_manipulator is None:
-            self.root_window.after(10, self.update_navigation_window)
+            self.root_window.after(
+                WINDOW_REFRESH_INTERVAL_MS, self.update_navigation_window
+            )
             return
 
         if self.navigation_window is None:
-            self.root_window.after(10, self.update_navigation_window)
+            self.root_window.after(
+                WINDOW_REFRESH_INTERVAL_MS, self.update_navigation_window
+            )
             return
 
         self.navigation_window.set_image_manipulator(self.image_manipulator)
@@ -1025,7 +1034,9 @@ class ImageViewerApp:
             self.image_manipulator.annotation_image
         )
 
-        self.root_window.after(10, self.update_navigation_window)
+        self.root_window.after(
+            WINDOW_REFRESH_INTERVAL_MS, self.update_navigation_window
+        )
 
     def start_annotation_loop(self):
         if self.annotation_loop_running:
@@ -1039,11 +1050,15 @@ class ImageViewerApp:
             return
 
         if self.image_manipulator is None:
-            self.root_window.after(10, self.update_annotation_window)
+            self.root_window.after(
+                WINDOW_REFRESH_INTERVAL_MS, self.update_annotation_window
+            )
             return
 
         if self.annotation_window is None:
-            self.root_window.after(10, self.update_annotation_window)
+            self.root_window.after(
+                WINDOW_REFRESH_INTERVAL_MS, self.update_annotation_window
+            )
             return
 
         self.annotation_window.set_image_manipulator(self.image_manipulator)
@@ -1073,7 +1088,10 @@ class ImageViewerApp:
 
             if self.operation_mode == "ellipse":
                 self.ensure_current_ellipse()
-                if self.current_ellipse is not None and self.current_ellipse.in_configuration:
+                if (
+                    self.current_ellipse is not None
+                    and self.current_ellipse.in_configuration
+                ):
                     self.current_ellipse.configure_ellipse_parameters()
                     self.current_ellipse.create_minor_axis_annotation_points()
                 if self.current_ellipse is not None and self.current_ellipse.finished:
@@ -1089,7 +1107,9 @@ class ImageViewerApp:
             self.annotation_window.point_x = None
             self.annotation_window.point_y = None
 
-        self.root_window.after(10, self.update_annotation_window)
+        self.root_window.after(
+            WINDOW_REFRESH_INTERVAL_MS, self.update_annotation_window
+        )
 
     def run(self):
         self.root_window.mainloop()

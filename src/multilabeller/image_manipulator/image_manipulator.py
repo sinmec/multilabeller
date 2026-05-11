@@ -22,7 +22,7 @@ class ImageManipulator:
         self.rectangle_ROI_width = 0
         self.rectangle_ROI_height = 0
         self.rectangle_ROI_zoom = 1.0
-        self.rectangle_ROI_zoom_count = 30
+        self.rectangle_ROI_zoom_count = 8
         self.j = 0
 
         self.get_image_dimensions()
@@ -45,32 +45,27 @@ class ImageManipulator:
         )
 
     def initialize_rectangle_ROI(self):
-        self.rectangle_ROI_width = (
-            self.navigation_image_width // self.rectangle_ROI_zoom_count
-        )
-        self.rectangle_ROI_height = (
-            self.navigation_image_height // self.rectangle_ROI_zoom_count
-        )
+        self.update_rectangle_size()
 
     def update_rectangle_size(self):
-        min_rectangle_width = 10
-        min_rectangle_height = min_rectangle_width * self.navigation_image_aspect_ratio
-
-        max_zoom = float(self.navigation_image_height / min_rectangle_height)
-        min_zoom = 1.01
-
-        h = 1.0 / max_zoom
-
-        self.rectangle_ROI_zoom = np.clip(
-            h * self.rectangle_ROI_zoom_count, min_zoom, max_zoom
+        min_image_dimension = min(
+            self.navigation_image_width,
+            self.navigation_image_height,
+        )
+        min_rectangle_side = 10
+        max_zoom_count = max(1.0, min_image_dimension / min_rectangle_side)
+        self.rectangle_ROI_zoom_count = np.clip(
+            self.rectangle_ROI_zoom_count,
+            1.0,
+            max_zoom_count,
         )
 
-        self.rectangle_ROI_width = int(
-            self.navigation_image_width / self.rectangle_ROI_zoom
-        )
-        self.rectangle_ROI_height = int(
-            self.navigation_image_height / self.rectangle_ROI_zoom
-        )
+        rectangle_side = int(min_image_dimension / self.rectangle_ROI_zoom_count)
+        rectangle_side = max(min_rectangle_side, rectangle_side)
+
+        self.rectangle_ROI_zoom = self.rectangle_ROI_zoom_count
+        self.rectangle_ROI_width = rectangle_side
+        self.rectangle_ROI_height = rectangle_side
 
     def draw_rectangle_ROI(self, mouse_x, mouse_y, color):
         rectangle_color = color
@@ -78,15 +73,15 @@ class ImageManipulator:
 
         # TODO: Better names, those are the rectangle ROI points!
         self.x1 = int(mouse_x - self.rectangle_ROI_width / 2)
-        self.y1 = int(mouse_y - self.rectangle_ROI_width / 2)
+        self.y1 = int(mouse_y - self.rectangle_ROI_height / 2)
         self.x2 = int(mouse_x + self.rectangle_ROI_width / 2)
-        self.y2 = int(mouse_y + self.rectangle_ROI_width / 2)
+        self.y2 = int(mouse_y + self.rectangle_ROI_height / 2)
 
         self.x1 = max(2, self.x1)
         self.y1 = max(2, self.y1)
 
         self.x2 = min(self.navigation_image_width - 2, self.x2)
-        self.y2 = min(self.navigation_image_height + 2, self.y2)
+        self.y2 = min(self.navigation_image_height - 2, self.y2)
 
         self.annotation_image_coordinates = (self.x1, self.x2, self.y1, self.y2)
 

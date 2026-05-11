@@ -65,10 +65,10 @@ class Contour:
         point_x = (point_image[0] - x1) * scale_x
         point_y = (point_image[1] - y1) * scale_y
 
-        return [round(point_x), round(point_y)]
+        return [int(point_x), int(point_y)]
 
     def image_point_to_navigation_point(self, point_image, target):
-        return [round(point_image[0]), round(point_image[1])]
+        return [int(point_image[0]), int(point_image[1])]
 
     def translate_from_annotation_to_image(self, target):
         self.points_image = [None for _ in range(len(self.points_annotation_window))]
