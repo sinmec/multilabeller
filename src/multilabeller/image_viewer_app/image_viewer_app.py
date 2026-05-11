@@ -24,6 +24,8 @@ if os.name == "nt":
 if os.name == "posix":
     os_option = "linux"
 
+WINDOW_REFRESH_INTERVAL_MS = 33
+
 
 class ImageViewerApp:
     def __init__(self, root, contour_collection):
@@ -304,15 +306,6 @@ class ImageViewerApp:
         with h5py.File(h5_path, "r") as h5:
             for img_key in h5.keys():
                 self.h5_images.append(img_key)
-                self.h5_image_raw[img_key] = np.array(
-                    h5[img_key]["img"][...], dtype=np.uint8
-                )
-                contours = []
-                for cnt_key in sorted(h5[img_key]["contours"].keys()):
-                    contours.append(
-                        np.array(h5[img_key]["contours"][cnt_key][...], dtype=np.int32)
-                    )
-                self.h5_contour_raw[img_key] = contours
 
         if not self.h5_images:
             print("No images found in the h5 file.")
@@ -322,8 +315,25 @@ class ImageViewerApp:
         self.select_h5_image()
         self.initialize_buttons()
 
+    def _load_h5_image_data(self, img_key):
+        """Load image and contours for *img_key* from the h5 file into the cache."""
+        with h5py.File(self.h5_file_path, "r") as h5:
+            self.h5_image_raw[img_key] = np.array(
+                h5[img_key]["img"][...], dtype=np.uint8
+            )
+            contours = []
+            for cnt_key in sorted(h5[img_key]["contours"].keys()):
+                contours.append(
+                    np.array(h5[img_key]["contours"][cnt_key][...], dtype=np.int32)
+                )
+            self.h5_contour_raw[img_key] = contours
+
     def select_h5_image(self):
         img_key = self.h5_images[self.file_index]
+
+        if img_key not in self.h5_image_raw:
+            self._load_h5_image_data(img_key)
+
         image = self.h5_image_raw[img_key]
 
         self.image_manipulator = ImageManipulator(image, self.config)
@@ -331,11 +341,9 @@ class ImageViewerApp:
 
         for cnt_array in self.h5_contour_raw[img_key]:
             contour = DrawedContour()
-            n_pts = cnt_array.shape[0]
-            contour.points_image = [
-                [int(cnt_array[i, 0, 0]), int(cnt_array[i, 0, 1])]
-                for i in range(n_pts)
-            ]
+            contour.points_image = cnt_array[:, 0, :].tolist()
+            contour.points_navigation_window = contour.points_image.copy()
+            contour.navigation_window_contour = cnt_array
             contour.in_progress = False
             contour.finished = True
             self.annotation_objects.append(contour)
@@ -399,16 +407,33 @@ class ImageViewerApp:
             return
 
         output_path = Path(output_file)
+        n_total = 0
         with h5py.File(output_path, "w") as h5_out:
             h5_out.attrs["date"] = datetime.now().strftime("%Y_%m_%d_%H_%M")
-            for img_key in self.h5_images:
-                img_group = h5_out.create_group(img_key)
-                img_group.create_dataset("img", data=self.h5_image_raw[img_key])
-                contours_group = img_group.create_group("contours")
-                for i, cnt in enumerate(self.h5_contour_raw[img_key]):
-                    contours_group.create_dataset(f"cnt_{i:06d}", data=cnt)
-
-        n_total = sum(len(v) for v in self.h5_contour_raw.values())
+            with h5py.File(self.h5_file_path, "r") as h5_src:
+                for img_key in self.h5_images:
+                    img_group = h5_out.create_group(img_key)
+                    if img_key in self.h5_image_raw:
+                        img_group.create_dataset("img", data=self.h5_image_raw[img_key])
+                    else:
+                        img_group.create_dataset(
+                            "img",
+                            data=np.array(h5_src[img_key]["img"][...], dtype=np.uint8),
+                        )
+                    contours_group = img_group.create_group("contours")
+                    if img_key in self.h5_contour_raw:
+                        contours = self.h5_contour_raw[img_key]
+                    else:
+                        contours = [
+                            np.array(
+                                h5_src[img_key]["contours"][cnt_key][...],
+                                dtype=np.int32,
+                            )
+                            for cnt_key in sorted(h5_src[img_key]["contours"].keys())
+                        ]
+                    for i, cnt in enumerate(contours):
+                        contours_group.create_dataset(f"cnt_{i:06d}", data=cnt)
+                    n_total += len(contours)
         print(
             f"Exported {n_total} contours across {len(self.h5_images)} images to {output_path}"
         )
@@ -448,6 +473,20 @@ class ImageViewerApp:
         self.navigation_window.set_image_manipulator(self.image_manipulator)
         self.annotation_window.set_image_manipulator(self.image_manipulator)
         self.navigation_window.annotation_mode = False
+
+        navigation_width = self.image_manipulator.navigation_image_width
+        navigation_height = self.image_manipulator.navigation_image_height
+        canvas_width, canvas_height = self.get_navigation_canvas_size(
+            navigation_width, navigation_height
+        )
+        self.navigation_window.canvas.configure(
+            width=canvas_width,
+            height=canvas_height,
+            scrollregion=(0, 0, navigation_width, navigation_height),
+        )
+
+        self.navigation_window.canvas.xview_moveto(0)
+        self.navigation_window.canvas.yview_moveto(0)
 
         self.navigation_window.point_x = None
         self.navigation_window.point_y = None
@@ -539,8 +578,44 @@ class ImageViewerApp:
         else:
             _width = self.image_manipulator.navigation_image_width
             _height = self.image_manipulator.navigation_image_height
-            window.canvas = tk.Canvas(window, width=_width, height=_height)
-            window.canvas.pack()
+            canvas_width, canvas_height = self.get_navigation_canvas_size(
+                _width, _height
+            )
+
+            window.canvas_frame = tk.Frame(window)
+            window.canvas_frame.pack(fill=tk.BOTH, expand=True)
+
+            window.canvas = tk.Canvas(
+                window.canvas_frame,
+                width=canvas_width,
+                height=canvas_height,
+                scrollregion=(0, 0, _width, _height),
+            )
+            window.vertical_scrollbar = tk.Scrollbar(
+                window.canvas_frame,
+                orient=tk.VERTICAL,
+                command=window.canvas.yview,
+            )
+            window.horizontal_scrollbar = tk.Scrollbar(
+                window.canvas_frame,
+                orient=tk.HORIZONTAL,
+                command=window.canvas.xview,
+            )
+            window.canvas.configure(
+                xscrollcommand=window.horizontal_scrollbar.set,
+                yscrollcommand=window.vertical_scrollbar.set,
+            )
+
+            window.canvas.grid(row=0, column=0, sticky="nsew")
+            window.vertical_scrollbar.grid(row=0, column=1, sticky="ns")
+            window.horizontal_scrollbar.grid(row=1, column=0, sticky="ew")
+            window.canvas_frame.rowconfigure(0, weight=1)
+            window.canvas_frame.columnconfigure(0, weight=1)
+
+    def get_navigation_canvas_size(self, image_width, image_height):
+        max_width = max(400, self.root_window.winfo_screenwidth() - 100)
+        max_height = max(300, self.root_window.winfo_screenheight() - 140)
+        return min(image_width, max_width), min(image_height, max_height)
 
     def initialize_windows(self):
         self.navigation_window = Window(
@@ -980,11 +1055,15 @@ class ImageViewerApp:
             return
 
         if self.image_manipulator is None:
-            self.root_window.after(10, self.update_navigation_window)
+            self.root_window.after(
+                WINDOW_REFRESH_INTERVAL_MS, self.update_navigation_window
+            )
             return
 
         if self.navigation_window is None:
-            self.root_window.after(10, self.update_navigation_window)
+            self.root_window.after(
+                WINDOW_REFRESH_INTERVAL_MS, self.update_navigation_window
+            )
             return
 
         self.navigation_window.set_image_manipulator(self.image_manipulator)
@@ -1005,7 +1084,9 @@ class ImageViewerApp:
             self.image_manipulator.annotation_image
         )
 
-        self.root_window.after(10, self.update_navigation_window)
+        self.root_window.after(
+            WINDOW_REFRESH_INTERVAL_MS, self.update_navigation_window
+        )
 
     def start_annotation_loop(self):
         if self.annotation_loop_running:
@@ -1019,11 +1100,15 @@ class ImageViewerApp:
             return
 
         if self.image_manipulator is None:
-            self.root_window.after(10, self.update_annotation_window)
+            self.root_window.after(
+                WINDOW_REFRESH_INTERVAL_MS, self.update_annotation_window
+            )
             return
 
         if self.annotation_window is None:
-            self.root_window.after(10, self.update_annotation_window)
+            self.root_window.after(
+                WINDOW_REFRESH_INTERVAL_MS, self.update_annotation_window
+            )
             return
 
         self.annotation_window.set_image_manipulator(self.image_manipulator)
@@ -1053,7 +1138,10 @@ class ImageViewerApp:
 
             if self.operation_mode == "ellipse":
                 self.ensure_current_ellipse()
-                if self.current_ellipse is not None and self.current_ellipse.in_configuration:
+                if (
+                    self.current_ellipse is not None
+                    and self.current_ellipse.in_configuration
+                ):
                     self.current_ellipse.configure_ellipse_parameters()
                     self.current_ellipse.create_minor_axis_annotation_points()
                 if self.current_ellipse is not None and self.current_ellipse.finished:
@@ -1069,7 +1157,9 @@ class ImageViewerApp:
             self.annotation_window.point_x = None
             self.annotation_window.point_y = None
 
-        self.root_window.after(10, self.update_annotation_window)
+        self.root_window.after(
+            WINDOW_REFRESH_INTERVAL_MS, self.update_annotation_window
+        )
 
     def run(self):
         self.root_window.mainloop()

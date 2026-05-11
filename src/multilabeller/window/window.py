@@ -17,6 +17,7 @@ class Window(tk.Toplevel):
 
         self.shared_queue = shared_queue
         self.canvas = None
+        self._canvas_image_id = None
         self.loop = None
         self.config = config
 
@@ -34,6 +35,7 @@ class Window(tk.Toplevel):
         self.point_y = None
 
         self.annotation_mode = False
+        self._last_annotation_contour_coordinates = None
 
     def get_mouse_wheel_step_sensibility(self):
         configured_step = self.config["mouse_wheel"]["step_sensibility"]
@@ -101,6 +103,8 @@ class Window(tk.Toplevel):
         self.loop()
 
     def set_image_manipulator(self, image_manipulator):
+        if image_manipulator is not self.image_manipulator:
+            self._last_annotation_contour_coordinates = None
         self.image_manipulator = image_manipulator
 
     def is_ctrl_pressed(self, event):
@@ -132,14 +136,17 @@ class Window(tk.Toplevel):
         image = Image.fromarray(self.image_manipulator.navigation_image)
         photo = ImageTk.PhotoImage(image=image)
 
-        try:
-            self.canvas.create_image(0, 0, anchor=tk.NW, image=photo)
-        except tk.TclError:
-            return
+        self._display_canvas_image(photo)
         self.canvas.photo = photo
 
     def draw_annotation_window_objects(self):
         image_copy = self.image_manipulator.annotation_image_buffer.copy()
+        annotation_coordinates = tuple(
+            self.image_manipulator.annotation_image_coordinates
+        )
+        refresh_annotation_contours = (
+            annotation_coordinates != self._last_annotation_contour_coordinates
+        )
 
         for annotation_object in self.contour_collection.items:
             if annotation_object.__class__.__name__ == "Ellipse":
@@ -164,10 +171,14 @@ class Window(tk.Toplevel):
 
         for annotation_object in self.contour_collection.items:
             if annotation_object.finished:
-                annotation_object.translate_from_navigation_to_annotation_windows(
-                    self.image_manipulator
-                )
-                annotation_object.to_cv2_contour()
+                if (
+                    refresh_annotation_contours
+                    or annotation_object.annotation_window_contour is None
+                ):
+                    annotation_object.translate_from_navigation_to_annotation_windows(
+                        self.image_manipulator
+                    )
+                    annotation_object.to_cv2_contour()
 
         for annotation_object in self.contour_collection.items:
             if annotation_object is None:
@@ -206,6 +217,7 @@ class Window(tk.Toplevel):
                     pass
 
         self.image_manipulator.annotation_image = image_copy
+        self._last_annotation_contour_coordinates = annotation_coordinates
 
     def draw_navigation_window_objects(self):
         image_copy = self.image_manipulator.navigation_image_buffer.copy()
@@ -218,10 +230,11 @@ class Window(tk.Toplevel):
             if annotation_object.in_progress:
                 continue
 
-            annotation_object.translate_from_navigation_to_annotation_windows(
-                self.image_manipulator
-            )
-            annotation_object.to_cv2_contour()
+            if annotation_object.navigation_window_contour is None:
+                annotation_object.translate_from_image_to_navigation_window(
+                    self.image_manipulator
+                )
+                annotation_object.to_cv2_contour()
 
             cv2.drawContours(
                 image_copy,
@@ -247,15 +260,28 @@ class Window(tk.Toplevel):
         image = Image.fromarray(self.image_manipulator.annotation_image)
         photo = ImageTk.PhotoImage(image=image)
 
-        try:
-            self.canvas.create_image(0, 0, anchor=tk.NW, image=photo)
-        except tk.TclError:
-            return
+        self._display_canvas_image(photo)
         self.canvas.photo = photo
 
+    def _display_canvas_image(self, photo):
+        try:
+            if self._canvas_image_id is None:
+                self._canvas_image_id = self.canvas.create_image(
+                    0, 0, anchor=tk.NW, image=photo
+                )
+            else:
+                self.canvas.itemconfigure(self._canvas_image_id, image=photo)
+        except tk.TclError:
+            return
+
     def get_mouse_position(self, event):
-        self.mouse_x = event.x
-        self.mouse_y = event.y
+        if self.canvas is None:
+            self.mouse_x = event.x
+            self.mouse_y = event.y
+            return
+
+        self.mouse_x = int(self.canvas.canvasx(event.x))
+        self.mouse_y = int(self.canvas.canvasy(event.y))
 
     def draw_ROI(self, color):
         self.image_manipulator.update_rectangle_size()

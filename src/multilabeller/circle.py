@@ -70,9 +70,9 @@ class WheelCircle(Contour):
         self.circle_contour = None
 
     def _create_cv2_contour(self, center, radius):
-        center_x = round(center[0])
-        center_y = round(center[1])
-        radius = round(radius)
+        center_x = int(center[0])
+        center_y = int(center[1])
+        radius = int(radius)
 
         ellipse_poly = cv2.ellipse2Poly(
             (center_x, center_y), (radius, radius), 0, 360, 1, 1

@@ -8,19 +8,18 @@ class DrawedContour(Contour):
         super().__init__()
 
     def to_cv2_contour(self):
-        N_points = len(self.points_annotation_window)
-        cv2_contour = np.zeros((N_points, 1, 2), dtype=int)
-        for i, (x, y) in enumerate(self.points_annotation_window):
-            cv2_contour[i, 0, 0] = self.points_annotation_window[i][0]
-            cv2_contour[i, 0, 1] = self.points_annotation_window[i][1]
-        self.annotation_window_contour = cv2_contour
+        self.annotation_window_contour = self._points_to_cv2_contour(
+            self.points_annotation_window
+        )
+        self.navigation_window_contour = self._points_to_cv2_contour(
+            self.points_navigation_window
+        )
 
-        N_points = len(self.points_navigation_window)
-        cv2_contour = np.zeros((N_points, 1, 2), dtype=int)
-        for i, (x, y) in enumerate(self.points_navigation_window):
-            cv2_contour[i, 0, 0] = self.points_navigation_window[i][0]
-            cv2_contour[i, 0, 1] = self.points_navigation_window[i][1]
-        self.navigation_window_contour = cv2_contour
+    def _points_to_cv2_contour(self, points):
+        if len(points) == 0:
+            return np.zeros((0, 1, 2), dtype=int)
+
+        return np.asarray(points, dtype=int).reshape((-1, 1, 2))
 
     def add_points(self, point):
         if point is not None:
