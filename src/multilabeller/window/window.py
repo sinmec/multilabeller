@@ -17,6 +17,7 @@ class Window(tk.Toplevel):
 
         self.shared_queue = shared_queue
         self.canvas = None
+        self._canvas_image_id = None
         self.loop = None
         self.config = config
 
@@ -135,10 +136,7 @@ class Window(tk.Toplevel):
         image = Image.fromarray(self.image_manipulator.navigation_image)
         photo = ImageTk.PhotoImage(image=image)
 
-        try:
-            self.canvas.create_image(0, 0, anchor=tk.NW, image=photo)
-        except tk.TclError:
-            return
+        self._display_canvas_image(photo)
         self.canvas.photo = photo
 
     def draw_annotation_window_objects(self):
@@ -262,15 +260,28 @@ class Window(tk.Toplevel):
         image = Image.fromarray(self.image_manipulator.annotation_image)
         photo = ImageTk.PhotoImage(image=image)
 
-        try:
-            self.canvas.create_image(0, 0, anchor=tk.NW, image=photo)
-        except tk.TclError:
-            return
+        self._display_canvas_image(photo)
         self.canvas.photo = photo
 
+    def _display_canvas_image(self, photo):
+        try:
+            if self._canvas_image_id is None:
+                self._canvas_image_id = self.canvas.create_image(
+                    0, 0, anchor=tk.NW, image=photo
+                )
+            else:
+                self.canvas.itemconfigure(self._canvas_image_id, image=photo)
+        except tk.TclError:
+            return
+
     def get_mouse_position(self, event):
-        self.mouse_x = event.x
-        self.mouse_y = event.y
+        if self.canvas is None:
+            self.mouse_x = event.x
+            self.mouse_y = event.y
+            return
+
+        self.mouse_x = int(self.canvas.canvasx(event.x))
+        self.mouse_y = int(self.canvas.canvasy(event.y))
 
     def draw_ROI(self, color):
         self.image_manipulator.update_rectangle_size()

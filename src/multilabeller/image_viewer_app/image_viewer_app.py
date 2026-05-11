@@ -474,6 +474,17 @@ class ImageViewerApp:
         self.annotation_window.set_image_manipulator(self.image_manipulator)
         self.navigation_window.annotation_mode = False
 
+        navigation_width = self.image_manipulator.navigation_image_width
+        navigation_height = self.image_manipulator.navigation_image_height
+        canvas_width, canvas_height = self.get_navigation_canvas_size(
+            navigation_width, navigation_height
+        )
+        self.navigation_window.canvas.configure(
+            width=canvas_width,
+            height=canvas_height,
+            scrollregion=(0, 0, navigation_width, navigation_height),
+        )
+
         self.navigation_window.point_x = None
         self.navigation_window.point_y = None
         self.navigation_window.last_mouse_event_x = None
@@ -564,8 +575,44 @@ class ImageViewerApp:
         else:
             _width = self.image_manipulator.navigation_image_width
             _height = self.image_manipulator.navigation_image_height
-            window.canvas = tk.Canvas(window, width=_width, height=_height)
-            window.canvas.pack()
+            canvas_width, canvas_height = self.get_navigation_canvas_size(
+                _width, _height
+            )
+
+            window.canvas_frame = tk.Frame(window)
+            window.canvas_frame.pack(fill=tk.BOTH, expand=True)
+
+            window.canvas = tk.Canvas(
+                window.canvas_frame,
+                width=canvas_width,
+                height=canvas_height,
+                scrollregion=(0, 0, _width, _height),
+            )
+            window.vertical_scrollbar = tk.Scrollbar(
+                window.canvas_frame,
+                orient=tk.VERTICAL,
+                command=window.canvas.yview,
+            )
+            window.horizontal_scrollbar = tk.Scrollbar(
+                window.canvas_frame,
+                orient=tk.HORIZONTAL,
+                command=window.canvas.xview,
+            )
+            window.canvas.configure(
+                xscrollcommand=window.horizontal_scrollbar.set,
+                yscrollcommand=window.vertical_scrollbar.set,
+            )
+
+            window.canvas.grid(row=0, column=0, sticky="nsew")
+            window.vertical_scrollbar.grid(row=0, column=1, sticky="ns")
+            window.horizontal_scrollbar.grid(row=1, column=0, sticky="ew")
+            window.canvas_frame.rowconfigure(0, weight=1)
+            window.canvas_frame.columnconfigure(0, weight=1)
+
+    def get_navigation_canvas_size(self, image_width, image_height):
+        max_width = max(400, self.root_window.winfo_screenwidth() - 100)
+        max_height = max(300, self.root_window.winfo_screenheight() - 140)
+        return min(image_width, max_width), min(image_height, max_height)
 
     def initialize_windows(self):
         self.navigation_window = Window(
