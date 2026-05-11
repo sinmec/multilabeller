@@ -75,6 +75,7 @@ class ImageViewerApp:
         self.h5_contour_raw = {}
 
         self.buttons_initialized = False
+        self.contours_visible = True
 
     def initialize_SAM(self):
         if self.config["SAM"]["device"] == "gpu":
@@ -557,6 +558,9 @@ class ImageViewerApp:
         text += f"Space: Save Drawed Contour | "
         text += f"{self.config['shortcuts']['selection_mode']}: Select Mode | "
         text += f"{self.config['shortcuts']['delete_contour']}: Delete Contours | "
+        text += (
+            f"{self.config['shortcuts']['contour_visibility_mode']}: Toggle Contours | "
+        )
         text += f"{self.config['shortcuts']['apply_SAM']}: Auto Segmentation"
 
         return text
@@ -626,6 +630,7 @@ class ImageViewerApp:
             self.contour_collection,
         )
         self.configure_window(self.navigation_window, None, None)
+        self.navigation_window.contours_visible = self.contours_visible
 
         self.annotation_window = Window(
             self.root_window,
@@ -639,6 +644,7 @@ class ImageViewerApp:
             self.config["image_viewer"]["width"],
             self.config["image_viewer"]["height"],
         )
+        self.annotation_window.contours_visible = self.contours_visible
 
         self.setup_run()
 
@@ -866,8 +872,22 @@ class ImageViewerApp:
         elif event.keysym == self.config["shortcuts"]["delete_contour"]:
             if self.operation_mode == "selection":
                 self.invalidate_selected_contours()
+        elif event.char == self.config["shortcuts"]["contour_visibility_mode"]:
+            self.toggle_contour_visibility()
         else:
             print(f"Please chose a valid option!")
+
+    def toggle_contour_visibility(self):
+        self.contours_visible = not self.contours_visible
+        if self.navigation_window is not None:
+            self.navigation_window.contours_visible = self.contours_visible
+        if self.annotation_window is not None:
+            self.annotation_window.contours_visible = self.contours_visible
+
+        if self.contours_visible:
+            print("Contours visible")
+        else:
+            print("Contours hidden")
 
     def save_drawed_contour(self):
         if self.current_drawed_contour is None:

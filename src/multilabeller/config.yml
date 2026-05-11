@@ -38,6 +38,7 @@ shortcuts:
   wheel_circle_mode: "w"
   ellipse_mode: "e"
   drawed_contour_mode: "c"
+  contour_visibility_mode: "m"
   save_contour: " "
   selection_mode: "v"
   delete_contour: "BackSpace"
