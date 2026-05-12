@@ -36,6 +36,7 @@ class Window(tk.Toplevel):
 
         self.annotation_mode = False
         self._last_annotation_contour_coordinates = None
+        self.contours_visible = True
 
     def get_mouse_wheel_step_sensibility(self):
         configured_step = self.config["mouse_wheel"]["step_sensibility"]
@@ -151,23 +152,25 @@ class Window(tk.Toplevel):
         for annotation_object in self.contour_collection.items:
             if annotation_object.__class__.__name__ == "Ellipse":
                 if annotation_object.in_configuration:
-                    cv2.drawContours(
-                        image_copy,
-                        [annotation_object.ellipse_contour],
-                        -1,
-                        annotation_object.color,
-                        1,
-                    )
+                    if self.contours_visible:
+                        cv2.drawContours(
+                            image_copy,
+                            [annotation_object.ellipse_contour],
+                            -1,
+                            annotation_object.color,
+                            1,
+                        )
 
             elif annotation_object.__class__.__name__ == "WheelCircle":
                 if annotation_object.in_configuration:
-                    cv2.drawContours(
-                        image_copy,
-                        [annotation_object.circle_contour],
-                        -1,
-                        annotation_object.color,
-                        1,
-                    )
+                    if self.contours_visible:
+                        cv2.drawContours(
+                            image_copy,
+                            [annotation_object.circle_contour],
+                            -1,
+                            annotation_object.color,
+                            1,
+                        )
 
         for annotation_object in self.contour_collection.items:
             if annotation_object.finished:
@@ -206,13 +209,14 @@ class Window(tk.Toplevel):
 
             elif annotation_object.finished:
                 try:
-                    cv2.drawContours(
-                        image_copy,
-                        [annotation_object.annotation_window_contour],
-                        -1,
-                        annotation_object.color,
-                        annotation_object.thickness,
-                    )
+                    if self.contours_visible:
+                        cv2.drawContours(
+                            image_copy,
+                            [annotation_object.annotation_window_contour],
+                            -1,
+                            annotation_object.color,
+                            annotation_object.thickness,
+                        )
                 except:  # TODO: Why we are having this strange errors?
                     pass
 
@@ -236,13 +240,14 @@ class Window(tk.Toplevel):
                 )
                 annotation_object.to_cv2_contour()
 
-            cv2.drawContours(
-                image_copy,
-                [annotation_object.navigation_window_contour],
-                -1,
-                annotation_object.color,
-                annotation_object.thickness,
-            )
+            if self.contours_visible:
+                cv2.drawContours(
+                    image_copy,
+                    [annotation_object.navigation_window_contour],
+                    -1,
+                    annotation_object.color,
+                    annotation_object.thickness,
+                )
 
         self.image_manipulator.navigation_image = image_copy
 
